@@ -1,3 +1,7 @@
+# USER SPECIFIC
 node_modules
 .vscode
 package-lock.*
+
+# CODE
+*.js
