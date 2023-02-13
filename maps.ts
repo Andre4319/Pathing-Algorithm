@@ -78,7 +78,7 @@ function load2D(img: Image2D): Map2D {
     const png = PNGSync.read(buffer);
     const { width, height } = png;
 
-    return load({path: img.path, width, box: {startPos: [0,0], endPos: [9,9]}});
+    return load({path: img.path, width, box: {startPos: [0,0], endPos: [width, height]}});
 }
 
 /**
