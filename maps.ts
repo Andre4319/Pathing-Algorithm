@@ -1,15 +1,15 @@
 let fs = require('fs');
 import * as PNGSync from "pngjs/lib/png-sync";
 
-type Position = [x: number, y: number];
-type BoundingBox = {startPos: Position, endPos: Position};
+type Position = [ x: number, y: number ]
+type FixedPositions = { startPos: Position, endPos: Position }
 
-type Image = {path: string, width: number, box: BoundingBox}
-type Image2D = {path: string}
-type Image3D = {path: string, boundingBox: number}
+type Image2D = { path: string }
+type Image3D = { path: string, area: number }
 
-type Map2D = {startPos: Position, endPos: Position, obstacles: Position[], traversable: Position[]};
-type Map3D = {zIndex: Map<number, Map2D>};
+type MapArray = { obstacles: Position[] | undefined, traversable: Position[] }
+type Map2D = { fixedPositions: FixedPositions | undefined, map: MapArray }
+type Map3D = { fixedPositions: FixedPositions | undefined, zIndex: Map<number, MapArray> }
 
 
 export function position(x: number, y: number): Position {
@@ -34,19 +34,23 @@ export function get3DMap(img: Image3D): Map3D {
     return load3D(img);
 }
 
+function InvalidMapException(message: string) {
+    this.message = message;
+    this.name = "InvalidMapException";
+}
+
 /**
  * Loads an image with a bounding box to render an area of the image
  * @param img The image to be loaded
  * @returns A 2D Map
  */
-function load(img: Image): Map2D {
-    let start: Position = [0,0], end: Position = [0,0];
-    const wall: Position[] = [], space: Position[] = [];
+function load(img: Image2D, area: number, width: number, startPos: Position): Map2D {
+    const map_2D: Map2D = {fixedPositions: {startPos: undefined, endPos: undefined}, map: {obstacles: [], traversable: []}}
     const buffer = fs.readFileSync(img.path);
     const png = PNGSync.read(buffer);
-    for (let y = img.box.startPos[1]; y < img.box.endPos[1]; y++) {
-        for (let x = img.box.startPos[0]; x < img.box.endPos[0]; x++) {
-            const idx = (img.width * y + x) << 2;
+    for (let y = startPos[1]; y < startPos[1] + area; y++) {
+        for (let x = startPos[0]; x < startPos[0] + area; x++) {
+            const idx = (width * y + x) << 2;
             
             // RGB VALUES
             const red = png.data[idx];
@@ -54,18 +58,18 @@ function load(img: Image): Map2D {
             const blue = png.data[idx + 2];
 
             if(red === 255 && green === 255 && blue === 255) { // WHITE
-                space.push(position(x, y));
+                map_2D.map.traversable.push(position(x,y));
             } else if(red === 255 && green === 0 && blue === 0) { // RED
-                start = position(x, y);
+                map_2D.fixedPositions.startPos = position(x, y);
             } else if(red === 0 && green === 255 && blue === 0){ // GREEN
-                end = position(x, y);
+                map_2D.fixedPositions.endPos = position(x, y);
             } else { // ALL OTHER COLORS
-                wall.push(position(x, y));
+                map_2D.map.obstacles.push(position(x,y))
             }
         }
     }
 
-    return {startPos: start, endPos: end, obstacles: wall, traversable: space}
+    return map_2D; 
 }
 
 /**
@@ -76,9 +80,15 @@ function load(img: Image): Map2D {
 function load2D(img: Image2D): Map2D {
     const buffer = fs.readFileSync(img.path);
     const png = PNGSync.read(buffer);
-    const { width, height } = png;
+    const { width } = png;
+    //TODO: Add functionality for non-cubed dimensions such as 15x4
+    const map_2D = load({path: img.path}, width, width, position(0, 0))
 
-    return load({path: img.path, width, box: {startPos: [0,0], endPos: [width, height]}});
+    if(map_2D.fixedPositions === undefined || map_2D.fixedPositions.startPos === undefined || map_2D.fixedPositions.endPos === undefined) {
+        throw new InvalidMapException("Can't obtain a start and/or 'end' position");
+    } else {
+        return map_2D;
+    }
 }
 
 /**
@@ -88,26 +98,43 @@ function load2D(img: Image2D): Map2D {
  */
 function load3D(img: Image3D): Map3D {
     let zIndex = 0;
+    let fixed_positions: FixedPositions = {startPos: undefined, endPos: undefined};
     const allMaps = new Map();
-    const buffer = fs.readFileSync(img.path);
-    const png = PNGSync.read(buffer);
-    const { width, height } = png;
-    const depth = [Math.floor(height / img.boundingBox), Math.floor(width / img.boundingBox)];
+    const { width, height } = PNGSync.read(fs.readFileSync(img.path));
+    const depth = [Math.floor(height / img.area), Math.floor(width / img.area)];
 
     for (let y = 0; y < depth[0]; y++) {
         for (let x = 0; x < depth[1]; x++) {
-            const zHeight = img.boundingBox * y + (y !== 0 ? 1 : 0);
-            const zWidth = img.boundingBox * x + (x !== 0 ? 1 : 0);
-            allMaps.set(zIndex, load({path: img.path, width: width, box: {startPos: [zWidth, zHeight], endPos: [zWidth + img.boundingBox, zHeight + img.boundingBox]}}));
+            const zHeight = img.area * y + (y !== 0 ? 1 : 0);
+            const zWidth = img.area * x + (x !== 0 ? 1 : 0);
+            //fixedPositions: {startPos: [zWidth, zHeight], endPos: [zWidth + img.area, zHeight + img.area]}
+            const map_2D = load({path: img.path}, img.area, width, position(zWidth, zHeight));
+            const map: MapArray = {obstacles: map_2D.map.obstacles, traversable: map_2D.map.traversable}
+            if(map_2D.fixedPositions.startPos != undefined) {
+                    fixed_positions.startPos = map_2D.fixedPositions.startPos;
+            }
+
+            if(map_2D.fixedPositions.endPos != undefined) {
+                    fixed_positions.endPos = map_2D.fixedPositions.endPos;
+            }
+
+            allMaps.set(zIndex, map);
             zIndex++;
         }
     }
 
-    return {zIndex: allMaps}
+    if(fixed_positions === undefined || fixed_positions.startPos === undefined || fixed_positions.endPos === undefined) {
+        throw new InvalidMapException("Can't obtain a start and/or 'end' position");
+    } else {
+        return {fixedPositions: fixed_positions, zIndex: allMaps}
+    }
 }
 
 // 2D Test
 //console.log(load2D({path: './resources/test.png'}))
 
-// 3D Test
-//console.log(load3D({path: './resources/3d_test.png', boundingBox: 9}))
+// 3D Test #1
+//console.log(load3D({path: './resources/3d_test.png', area: 9}))
+
+// 3D Test #2
+//console.log(load3D({path: './resources/3d_test2.png', area: 9}))
