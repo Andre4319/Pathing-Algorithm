@@ -4,16 +4,31 @@
 ##### Supervisor: Saroop Suresh
 
 # Description:
-Creating an algorithm that efficiently chooses a path from a starting point to an endpoint in a three-dimensional grid containing nontraversable obstacles.
-
+Creating an algorithm that efficiently chooses a path from a starting point
+to an endpoint in a two-dimensional grid containing nontraversable
+obstacles.
 
 # Goals:
-- Creating a grid with objects representing points (traversed and not yet traversed), obstacles (nontraversable), and starting points and endpoints.
+- [ ] Week 1: Creating a grid with objects representing points (traversed
+and not yet traversed), obstacles (nontraversable), and starting points
+and endpoints. Creating a visual representation of the traversal from
+one point to another.
 
-- Creating a visual representation of the traversal from one point to another.
+- [ ] Week 2-3: Creating a reasonably efficient algorithm for finding a path
+from a starting point to an endpoint.
 
-- Creating a reasonably efficient algorithm for finding a path from a starting point to an endpoint.
+- [ ] Optional: Adding more grids (maps with different obstacles) to test
+the algorithm.
 
-- Adding more grids (maps with different obstacles) to test the algorithm.
+- [ ] Optional: Refining the algorithm.
 
-- Optional: Refining the algorithm.
+- [ ] Optional: Extending the algorithm to three-dimensional grids
+
+# Communication 
+Mainly through Discord on a per-need basis, likely every week-day
+
+# Libraries
+
+| Libraries     | License       |
+| ------------- | ------------- |
+| [pngjs](https://github.com/lukeapage/pngjs)  | MIT License  |
