@@ -32,3 +32,4 @@ Mainly through Discord on a per-need basis, likely every week-day
 | Libraries     | License       |
 | ------------- | ------------- |
 | [pngjs](https://github.com/lukeapage/pngjs)  | MIT License  |
+| [jest](https://github.com/facebook/jest)     | MIT license  |

@@ -120,17 +120,3 @@ function load(png: any, imageBoundry: Boundary, mapBoundary: Boundary): Traversa
         return { static: staticNodes, boundary: imageBoundry, allNodes: traversableMaps }
     }
 }
-
-
-
-// 2D Test
-//console.log(loadImage({path: './resources/test.png'}, 9, 9))
-
-// 3D Test #1 ( Multiple start and end point )
-//console.log(loadImage({path: './resources/3d_test.png'}, 9, 9))
-
-// 3D Test #2 ( One start and end point )
-//console.log(loadImage({path: './resources/3d_test2.png'}, 9, 9))
-
-// 3D Test #3 ( Non-cubed dimensions & Different zIndex for both start and end points )
-//console.log(loadImage({path: './resources/3d_test3.png'}, 9, 18))
