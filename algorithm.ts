@@ -45,8 +45,9 @@ for (let x = 0; x <= 9; x++) {
     }
 }
 
-function aStar(start:gNode, end:gNode): gNode[] { // Returns an array of nodes that make up the most efficient path from start to end node
-    const openList = [start]; // Starting node is the initial node in the open list
+// Returns an array of nodes that make up the most efficient path from start to end node
+function aStar(start:gNode, end:gNode): gNode[] {
+    const openList = [start]; // Start node is the initial node in the open list
     const closedList = [];
 
     while (openList.length > 0) {
@@ -59,17 +60,17 @@ function aStar(start:gNode, end:gNode): gNode[] { // Returns an array of nodes t
             }
         }
 
-        // Removes current node (with lowest f cost) from open list
-        openList.splice(openList.indexOf(current), 1);
+        openList.splice(openList.indexOf(current), 1); // Removes current node (with lowest f cost) from open list
 
+        /*
+         * Generates adjacent nodes of current
+         * For each adjacent:
+         *  if end node, return array of parents
+         *  else calculate f cost
+         *      if adjacent is in open list but does not have the lowest f cost, skip
+         *      if adjacent is in closed list but does not have the lowest f cost, skip, otherwise add to open list
+         */
         
-        // Generates adjacent nodes of current
-        // For each adjacent:
-            // if end node, return array of parents
-            // else calculate f cost
-                // if adjacent is in open list but does not have the lowest f cost, skip
-                // if adjacent is in closed list but does not have the lowest f cost, skip, otherwise add to open list
-
         let adjacentNodes = getAdjacentNodes(current);
 
         for (let i = 0; i < adjacentNodes.length; i++) {
@@ -87,14 +88,13 @@ function aStar(start:gNode, end:gNode): gNode[] { // Returns an array of nodes t
             }
         }
 
-        // Moves current node to closed list
-        closedList.push(current);
+        closedList.push(current); // Moves current node to closed list
     }
 
     return []; // Returns empty array if no path exists
 }
 
-// Gets adjacent nodes of current, within map confinements and sets current as their parent
+// Gets adjacent nodes of current within map confinements and sets current as their parent
 function getAdjacentNodes(current: gNode): gNode[] {
     const x = current.x;
     const y = current.y;
