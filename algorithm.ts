@@ -67,8 +67,8 @@ function aStar(start:gNode, end:gNode): gNode[] { // Returns an array of nodes t
         // For each adjacent:
             // if end node, return array of parents
             // else calculate f cost
-                // if adjacent is in open list but not the lowest f cost, skip
-                // if adjacent is in closed list, 
+                // if adjacent is in open list but does not have the lowest f cost, skip
+                // if adjacent is in closed list but does not have the lowest f cost, skip, otherwise add to open list
 
         let adjacentNodes = getAdjacentNodes(current);
 
