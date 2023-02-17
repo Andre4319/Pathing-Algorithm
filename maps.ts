@@ -5,7 +5,7 @@ import * as PNG from 'pngjs'
 type Position = [ x: number, y: number, z: number | undefined ]
 type StaticNodes = { origin: Position, end: Position }
 
-type Image = { path: string }
+type Image = { name: string, path: string }
 type Boundary = { width: number, height: number }
 
 type MapArray = { obstacles: Position[] | undefined, traversable: Position[] }
@@ -23,14 +23,14 @@ export function position(x: number, y: number, z: number | undefined): Position 
 }
 
 /**
- * The global function to load an image and converts it to a traversable map
+ * Global function to load an image and converts it to a traversable map
  * @param image The image to be
  * @param map_width The width of the maps
  * @param map_height The height of the maps
  * @returns A traverasble map
  */
 export function loadImage(image: Image, map_width: number, map_height: number): TraversableMap {
-    const buffer = fs.readFileSync(image.path);
+    const buffer = fs.readFileSync(image.path + '/' + image.name);
     const png = PNGSync.read(buffer);
     const { width, height } = png;
 
@@ -38,7 +38,33 @@ export function loadImage(image: Image, map_width: number, map_height: number): 
 }
 
 /**
- * Creates a new traversable map with the specified parameters
+ * Global function to draw a path with the specified parameters
+ * @param image The image to be drawn upon
+ * @param correctPath The quickest path from the origin to the end point specified by an algorithm 
+ * @param searched What has been searched that isnt the correct path
+ */
+export function drawPath(image: Image, correctPath: Array<Position>, searched: Array<Position>) {
+    const targetDirectory = image.path + '/' + image.name.split('.')[0] + '/';
+    fs.mkdirSync(targetDirectory, { recursive: true });
+
+    fs.createReadStream(image.path + '/' + image.name)
+        .pipe(new PNG.PNG({filterType: 4}))
+        .on('parsed', function() {
+            searched.forEach(node => {
+                fillNode(this, node, 255, 196, 155);
+            })
+
+            correctPath.forEach(node => {
+                fillNode(this, node, 169, 204, 155);
+            });
+            
+            // Write the modified image to a file
+            this.pack().pipe(fs.createWriteStream(targetDirectory + 'complete.png'));
+        });
+}
+
+/**
+ * Global function to create a new traversable map with the specified parameters
  * @param imageBoundry The dimensions of the new image
  * @param mapBoundary The dimensions of the maps
  * @param staticNodes The static nodes of the image
