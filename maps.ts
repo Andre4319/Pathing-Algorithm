@@ -81,7 +81,7 @@ export function createMap(imageBoundry: Boundary, mapBoundary: Boundary, staticN
     }
 
     const depth: [number, number] = [Math.floor(imageBoundry.width / mapBoundary.width), Math.floor(imageBoundry.height / mapBoundary.height)]
-    const png = new PNG.PNG({width: imageBoundry.width + 1, height: imageBoundry.height + 1});
+    const png = new PNG.PNG({width: imageBoundry.width + depth[0] - 1, height: imageBoundry.height + depth[1] - 1});
     let yDepth: number = 0;
     const traversableMaps: Map<number, MapArray> = new Map<number, MapArray>(); 
 
