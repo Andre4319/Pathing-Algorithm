@@ -2,6 +2,16 @@ let fs = require('fs');
 import * as PNGSync from 'pngjs/lib/png-sync';
 import * as PNG from 'pngjs'
 
+type Color = {red: number, green: number, blue: number, alpha: number | undefined}
+const ColorDefenitions: Map<string, Color> = new Map<string, Color>([
+    ["map_background", {red: 255, green: 255, blue: 255, alpha: 255}],
+    ["map_border",     {red: 0,   green: 0,   blue: 0,   alpha: 255}],
+    ["map_obstacles",  {red: 0,   green: 0,   blue: 0,   alpha: 255}],
+    ["map_origin",     {red: 255, green: 0,   blue: 0,   alpha: 255}],
+    ["map_end",        {red: 0,   green: 255, blue: 0,   alpha: 255}],
+    ["path_correct",   {red: 169, green: 204, blue: 155, alpha: 255}],
+    ["path_searched",  {red: 255, green: 196, blue: 155, alpha: 255}],
+]);
 type Position = [ x: number, y: number, z: number | undefined ]
 type StaticNodes = { origin: Position, end: Position }
 
@@ -51,11 +61,11 @@ export function drawPath(image: Image, correctPath: Array<Position>, searched: A
         .pipe(new PNG.PNG({filterType: 4}))
         .on('parsed', function() {
             searched.forEach(node => {
-                fillNode(this, node, 255, 196, 155);
+                fillNodebyColor(this, node, ColorDefenitions.get("path_searched"));
             })
 
             correctPath.forEach(node => {
-                fillNode(this, node, 169, 204, 155);
+                fillNodebyColor(this, node, ColorDefenitions.get("path_correct"));
             });
             
             // Write the modified image to a file
@@ -90,11 +100,11 @@ export function createMap(imageBoundry: Boundary, mapBoundary: Boundary, staticN
         for(let x = 0; x < png.width; x++) {
             // Y MAP BORDER
             if (x % mapBoundary.width === 0 && x != 0 && x != imageBoundry.width) {
-                fillNode(png, [x, y, undefined], 0, 0, 0);
+                fillNodebyColor(png, [x, y, undefined], ColorDefenitions.get("map_border"));
                 xDepth++;
             // X MAP BORDER
             } else if (y % mapBoundary.height === 0 && y != 0 && y != imageBoundry.height) {
-                fillNode(png, [x, y, undefined], 0, 0, 0);
+                fillNodebyColor(png, [x, y, undefined], ColorDefenitions.get("map_border"));
                 if(y >= mapBoundary.height * (yDepth + 1)) {
                     yDepth++;
                 }
@@ -108,7 +118,7 @@ export function createMap(imageBoundry: Boundary, mapBoundary: Boundary, staticN
                                subArray[1] + (mapBoundary.height * newY) + yDepth === y; // Y
                     });
                     if(hasObstacles) {
-                        fillNode(png, [x, y, undefined], 0, 0, 0)
+                        fillNodebyColor(png, [x, y, undefined], ColorDefenitions.get("map_obstacles"));
                         continue;
                     }
                 }
@@ -118,18 +128,18 @@ export function createMap(imageBoundry: Boundary, mapBoundary: Boundary, staticN
                 // ORIGIN POINT
                 if(x === (mapBoundary.width * originCoordinates.newX) + xDepth + staticNodes.origin[0] && 
                    y === (mapBoundary.height * originCoordinates.newY) + yDepth + staticNodes.origin[1]) {
-                    fillNode(png, [x, y, undefined], 255, 0, 0)
+                    fillNodebyColor(png, [x, y, undefined], ColorDefenitions.get("map_origin"))
                     continue;
                 }
 
                 // END POINT
                 if(x === (mapBoundary.width * endCoordinates.newX) + xDepth + staticNodes.end[0] && 
                    y === (mapBoundary.height * endCoordinates.newY) + yDepth + staticNodes.end[1]) { 
-                    fillNode(png, [x, y, undefined], 0, 255, 0)
+                    fillNodebyColor(png, [x, y, undefined], ColorDefenitions.get("map_end"))
                     continue;
                 }
                 // FILL IN WHITE
-                fillNode(png, [x, y, undefined], 255, 255, 255);
+                fillNodebyColor(png, [x, y, undefined], ColorDefenitions.get("map_background"))
             }
         }
     }
@@ -174,12 +184,22 @@ function getGridPosition(position: Position, depth: [number, number]): { newX: n
  * @param green color between 0 - 255
  * @param blue color between 0 -255
  */
-function fillNode(png:any, position: Position, red: number, green: number, blue: number) {
+function fillNode(png:any, position: Position, red: number, green: number, blue: number, alpha: number) {
     const idx: number = (png.width * position[1] + position[0]) << 2
     png.data[idx] = limit(red, 0, 255);
     png.data[idx + 1] = limit(green, 0, 255);
     png.data[idx + 2] = limit(blue, 0, 255);
-    png.data[idx + 3] = 255;
+    png.data[idx + 3] = limit(alpha, 0, 255);
+}
+
+/**
+ * Colors in a node with a given position
+ * @param png The image
+ * @param position The position of the node
+ * @param color The color values
+ */
+function fillNodebyColor(png:any, position: Position, color: Color) {
+    fillNode(png, position, color.red, color.blue, color.green, color.alpha);
 }
 
 /**
@@ -218,17 +238,19 @@ function getAllNodes(png: any, imageBoundry: Boundary, startPos: Position, mapBo
             const idx = (imageBoundry.width * y + x) << 2;
             
             // RGB VALUES
-            const red = png.data[idx];
-            const green = png.data[idx + 1];
-            const blue = png.data[idx + 2];
+            const pixelColor: Color = {red: png.data[idx], green: png.data[idx + 1], blue: png.data[idx + 2], alpha: 255}
 
-            if(red === 255 && green === 255 && blue === 255) { // WHITE
+            const originColor = ColorDefenitions.get("map_origin");
+            const endColor = ColorDefenitions.get("map_end");
+            const mapColor = ColorDefenitions.get("map_background");
+
+            if(pixelColor.red == mapColor.red && pixelColor.green == mapColor.green && pixelColor.blue == mapColor.blue) {
                 positionData.allNodes.traversable.push(position(x,y,startPos[2]));
-            } else if(red === 255 && green === 0 && blue === 0) { // RED
+            } else if(pixelColor.red == endColor.red && pixelColor.green == endColor.green && pixelColor.blue == endColor.blue) {
                 positionData.static.origin = position(x,y,startPos[2]);
-            } else if(red === 0 && green === 255 && blue === 0){ // GREEN
+            } else if(pixelColor.red == originColor.red && pixelColor.green == originColor.green && pixelColor.blue == originColor.blue) {
                 positionData.static.end = position(x,y,startPos[2]);
-            } else { // ALL OTHER COLORS
+            } else {
                 positionData.allNodes.obstacles.push(position(x,y,startPos[2]));
             }
         }
