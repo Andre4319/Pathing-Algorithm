@@ -12,23 +12,23 @@ const ColorDefenitions: Map<string, Color> = new Map<string, Color>([
     ["path_correct",   {red: 169, green: 204, blue: 155, alpha: 255}],
     ["path_searched",  {red: 255, green: 196, blue: 155, alpha: 255}],
 ]);
-type Position = [ x: number, y: number, z: number | undefined ]
-type StaticNodes = { origin: Position, end: Position }
+export type Node = [ x: number, y: number, z: number | undefined ]
+type StaticNodes = { origin: Node, end: Node }
 
 type Image = { name: string, path: string }
 type Boundary = { width: number, height: number }
 
-type MapArray = { obstacles: Position[] | undefined, traversable: Position[] }
-type TraversableMap = { static: StaticNodes, boundary: Boundary, allNodes: Map<number, MapArray> }
+type MapArray = { obstacles: Node[] | undefined, traversable: Node[] }
+export type TraversableMap = { static: StaticNodes, boundary: Boundary, allNodes: Map<number, MapArray> }
 
 /**
- * Global function to get a Position
+ * Global function to get a Node
  * @param x coordinate
  * @param y coordinate
  * @param z coordinate or if it is undefined a 0
- * @returns a position
+ * @returns a nodes position
  */
-export function position(x: number, y: number, z: number | undefined): Position {
+export function getNode(x: number, y: number, z: number | undefined): Node {
 	return [x, y, z === undefined ? 0 : z];
 }
 
@@ -53,7 +53,7 @@ export function loadImage(image: Image, map_width: number, map_height: number): 
  * @param correctPath The quickest path from the origin to the end point specified by an algorithm 
  * @param searched What has been searched that isnt the correct path
  */
-export function drawPath(image: Image, correctPath: Array<Position>, searched: Array<Position>) {
+export function drawPath(image: Image, correctPath: Array<Node>, searched: Array<Node>) {
     const targetDirectory = image.path + '/' + image.name.split('.')[0] + '/';
     fs.mkdirSync(targetDirectory, { recursive: true });
 
@@ -65,7 +65,7 @@ export function drawPath(image: Image, correctPath: Array<Position>, searched: A
             })
 
             correctPath.forEach(node => {
-                fillNodebyColor(this, node, ColorDefenitions.get("path_correct"));
+                fillNodebyColor(this, node, ColorDefenitions.get("path_correct")); 
             });
             
             // Write the modified image to a file
@@ -78,10 +78,10 @@ export function drawPath(image: Image, correctPath: Array<Position>, searched: A
  * @param imageBoundry The dimensions of the new image
  * @param mapBoundary The dimensions of the maps
  * @param staticNodes The static nodes of the image
- * @param obstacles The positions of all obstacles
+ * @param obstacles The nodes of all obstacles
  * @returns A traversable map and a new image
  */
-export function createMap(imageBoundry: Boundary, mapBoundary: Boundary, staticNodes: StaticNodes, obstacles: Position[] | undefined): TraversableMap {
+export function createMap(imageBoundry: Boundary, mapBoundary: Boundary, staticNodes: StaticNodes, obstacles: Node[] | undefined): TraversableMap {
     if(staticNodes.origin.toString() == staticNodes.end.toString()) {
         throw new InvalidMapException("Origin and end points can't have the same position");
     }
@@ -151,26 +151,63 @@ export function createMap(imageBoundry: Boundary, mapBoundary: Boundary, staticN
     return { static: staticNodes, boundary: imageBoundry, allNodes: traversableMaps }
     
 }
+
 /**
- * Given a position with depth (z) you can extract the position in a 2d grid
- * @param position To search
+ * Converts a map to a string
+ * @param map The map to be printed
+ * @param predicate If you wish to have custom symbols
+ * @returns The entire map as a string
+ */
+export function convertMapToString(map: TraversableMap, predicate: (base: string, node: Node) => string): string {
+    const origin_symbol = ' S ', end_symbol = ' E ', obstacle_symbol = ' O ', node_symbol = ' - '
+    let xp = "";
+    for(let y = 0; y < map.boundary.height; y++) {
+        for(let x = 0; x < map.boundary.width; x++) {
+            const hasObstacles: boolean = map.allNodes.get(0).obstacles.some(subArray => {
+                return subArray.length === 3 && 
+                       subArray[0] === x && // X
+                       subArray[1] === y; // Y
+            });
+
+            if(hasObstacles) {
+                xp += obstacle_symbol;
+            } else {
+                if(x === map.static.origin[0] && y === map.static.origin[1]) {
+                    xp += origin_symbol;
+                } else if(x === map.static.end[0] && y === map.static.end[1]) {
+                    xp += end_symbol;
+                } else {
+                    const customSymbol = predicate(node_symbol, getNode(x, y, 0));
+                    xp += customSymbol === '' ? node_symbol : customSymbol;
+                }
+            }
+        }
+        xp += '\n'
+    }
+
+    return xp;
+}
+
+/**
+ * Given a node with depth (z) you can extract the position in a 2d grid
+ * @param node To search
  * @param depth The depth of the map
  * @returns x & y coordinates
  */
-function getGridPosition(position: Position, depth: [number, number]): { newX: number, newY: number} {
+function getGridPosition(node: Node, depth: [number, number]): { newX: number, newY: number} {
     let newX: number = 0, newY: number = 0;
     const depthCheck = depth[1] === 1 ? depth[0] : depth[1];
-    if (position[2] === 0) { // FIRST GRID
+    if (node[2] === 0) { // FIRST GRID
         newX = 0;
         newY = 0;
-    } else if (position[2] < depthCheck) { // TOP GRIDS
-        newX = depth[0] - position[2];
+    } else if (node[2] < depthCheck) { // TOP GRIDS
+        newX = depth[0] - node[2];
         newY = 0; 
-    } else if (position[2] === depth[0]) { // AFTER ALL TOP GRIDS
+    } else if (node[2] === depth[0]) { // AFTER ALL TOP GRIDS
         newX = 0;
         newY++;
     } else { // BOTTOM GRIDS
-        newX = position[2] - depth[0];
+        newX = node[2] - depth[0];
         newY++;
     }
     return { newX, newY };
@@ -179,13 +216,13 @@ function getGridPosition(position: Position, depth: [number, number]): { newX: n
 /**
  * Colors in a node with a given position
  * @param png The image
- * @param position The position of the node
+ * @param node The node to color in
  * @param red color between 0 - 255
  * @param green color between 0 - 255
  * @param blue color between 0 -255
  */
-function fillNode(png:any, position: Position, red: number, green: number, blue: number, alpha: number) {
-    const idx: number = (png.width * position[1] + position[0]) << 2
+function fillNode(png:any, node: Node, red: number, green: number, blue: number, alpha: number) {
+    const idx: number = (png.width * node[1] + node[0]) << 2
     png.data[idx] = limit(red, 0, 255);
     png.data[idx + 1] = limit(green, 0, 255);
     png.data[idx + 2] = limit(blue, 0, 255);
@@ -195,11 +232,11 @@ function fillNode(png:any, position: Position, red: number, green: number, blue:
 /**
  * Colors in a node with a given position
  * @param png The image
- * @param position The position of the node
+ * @param node The node to color in
  * @param color The color values
  */
-function fillNodebyColor(png:any, position: Position, color: Color) {
-    fillNode(png, position, color.red, color.blue, color.green, color.alpha);
+function fillNodebyColor(png:any, node: Node, color: Color) {
+    fillNode(png, node, color.red, color.blue, color.green, color.alpha === undefined ? 255 : color.alpha);
 }
 
 /**
@@ -226,11 +263,11 @@ function InvalidMapException(message: string) {
  * Gets all nodes (origin and end points, all obstacles and traversable nodes)
  * @param png The image
  * @param imageBoundry The images boundries 
- * @param startPos Map starting position
+ * @param startPos Map starting nodes
  * @param mapBoundary The maps boundries
  * @returns All nodes in the image
  */
-function getAllNodes(png: any, imageBoundry: Boundary, startPos: Position, mapBoundary: Boundary): {static: StaticNodes, allNodes: {obstacles: Position[], traversable: Position[]}} {
+function getAllNodes(png: any, imageBoundry: Boundary, startPos: Node, mapBoundary: Boundary): {static: StaticNodes, allNodes: {obstacles: Node[], traversable: Node[]}} {
     const positionData = {static: {origin: undefined, end: undefined}, allNodes: {obstacles: [], traversable: []}};
 
     for (let y = startPos[1]; y < startPos[1] + mapBoundary.height; y++) {
@@ -245,13 +282,13 @@ function getAllNodes(png: any, imageBoundry: Boundary, startPos: Position, mapBo
             const mapColor = ColorDefenitions.get("map_background");
 
             if(pixelColor.red == mapColor.red && pixelColor.green == mapColor.green && pixelColor.blue == mapColor.blue) {
-                positionData.allNodes.traversable.push(position(x,y,startPos[2]));
-            } else if(pixelColor.red == endColor.red && pixelColor.green == endColor.green && pixelColor.blue == endColor.blue) {
-                positionData.static.origin = position(x,y,startPos[2]);
+                positionData.allNodes.traversable.push(getNode(x,y,startPos[2]));
             } else if(pixelColor.red == originColor.red && pixelColor.green == originColor.green && pixelColor.blue == originColor.blue) {
-                positionData.static.end = position(x,y,startPos[2]);
+                positionData.static.origin = getNode(x,y,startPos[2]);
+            } else if(pixelColor.red == endColor.red && pixelColor.green == endColor.green && pixelColor.blue == endColor.blue) {
+                positionData.static.end = getNode(x,y,startPos[2]);
             } else {
-                positionData.allNodes.obstacles.push(position(x,y,startPos[2]));
+                positionData.allNodes.obstacles.push(getNode(x,y,startPos[2]));
             }
         }
     }
@@ -277,7 +314,7 @@ function load(png: any, imageBoundry: Boundary, mapBoundary: Boundary): Traversa
             const zWidth: number = mapBoundary.width * x + (x !== 0 ? 1 : 0);
             const zHeight: number = mapBoundary.height * y + (y !== 0 ? 1 : 0);
             
-            const nodes = getAllNodes(png, imageBoundry, position(zWidth, zHeight, z), mapBoundary)
+            const nodes = getAllNodes(png, imageBoundry, getNode(zWidth, zHeight, z), mapBoundary)
             const map: MapArray = { obstacles: nodes.allNodes.obstacles, traversable: nodes.allNodes.traversable }
 
             if(nodes.static.origin != undefined) {
