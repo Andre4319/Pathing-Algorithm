@@ -88,8 +88,9 @@ function aStar(start:gNode, end:gNode): gNode[] {
             }
         }
 
-        return []; // Returns empty array if no path exists
     }
+    
+    return []; // Returns empty array if no path exists
 }
 
 // Gets adjacent nodes of current within map confinements and sets current as their parent
