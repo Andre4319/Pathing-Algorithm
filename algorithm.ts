@@ -1,5 +1,11 @@
 // A* Search Algorithm
 
+/* Comments:
+ * Unsure if g-cost should be calculated similarly to h-cost or in some way accumulatively
+ * Unsure if path from start to end needs its own variable/method, or if the end node's subsequent parents are supposed to form the full path (line 72)
+ * Unsure what it means to check "If new path to adjacent node is shorter" (line 80)
+ */
+
 // Node structure
 type gNode = {
     x: number; // x-coordinate
@@ -49,49 +55,41 @@ for (let x = 0; x <= 9; x++) {
 function aStar(start:gNode, end:gNode): gNode[] {
     const openList = [start]; // Start node is the initial node in the open list
     const closedList = [];
+    let current = openList[0]; // Current node is initially the first node in the open list
 
     while (openList.length > 0) {
-        let current = openList[0]; // Current node is initially the first node in the open list
-
         // Compares f costs of every node in the open list, saves lowest as current
-        for (let i = 1; i < openList.length; i++) {
-            if (current.f > openList[i].f) {
+        for (let i = 0; i < openList.length; i++) {
+            if (current.f < openList[i].f) {
                 current = openList[i];
             }
         }
 
-        openList.splice(openList.indexOf(current), 1); // Removes current node (with lowest f cost) from open list
+        openList.splice(openList.indexOf(current), 1); // Removes current node from open list
+        closedList.push(current); // Adds current node to closed list
 
-        /*
-         * Generates adjacent nodes of current
-         * For each adjacent:
-         *  if end node, return array of parents
-         *  else calculate f cost
-         *      if adjacent is in open list but does not have the lowest f cost, skip
-         *      if adjacent is in closed list but does not have the lowest f cost, skip, otherwise add to open list
-         */
-        
-        let adjacentNodes = getAdjacentNodes(current);
+        if (current.x === end.x && current.y === end.y) {
+            return [current]; // Returns current node including its parents (path) (?)
+        } else {
+            let adjacentNodes = getAdjacentNodes(current);
 
-        for (let i = 0; i < adjacentNodes.length; i++) {
-            if (adjacentNodes[i].x === end.x && adjacentNodes[i].y === end.y) { // If adjacent is end node, successively moves current parent to the beginning of the array 'path'
-                let path: gNode[] = [current];
+            for (let i = 0; i < adjacentNodes.length; i++) {
+                if (closedList.includes(adjacentNodes[i])) {
+                    continue;
+                } else {
+                    if (true || !openList.includes(adjacentNodes[i])) { // If new path to adjacent node is shorter OR adjacent node is NOT in open list (?)
+                        adjacentNodes[i].parent = current;
 
-                while (current.parent) {
-                    current = current.parent;
-                    path.unshift(current);
+                        if (!openList.includes(adjacentNodes[i])) {
+                            openList.push(adjacentNodes[i]);
+                        }
+                    }
                 }
-    
-                return path;
-            } else {
-                // *** NOT YET WRITTEN ***
             }
         }
 
-        closedList.push(current); // Moves current node to closed list
+        return []; // Returns empty array if no path exists
     }
-
-    return []; // Returns empty array if no path exists
 }
 
 // Gets adjacent nodes of current within map confinements and sets current as their parent
@@ -130,7 +128,7 @@ function getAdjacentNodes(current: gNode): gNode[] {
     return adjacentNodes;
 }
 
-// Calculates the distance/movement cost from node to end (h-cost) for the movement in eight directions (up/down/left/right/diagonal)
+// Calculates the distance/movement cost from current to end node (h-cost) for the movement in eight directions (up/down/left/right/diagonal)
 // Assumes length of 1 between nodes in up/down/left/right directions, sqrt(2) diagonally
 function heuristic(current: gNode, end: gNode): number {
     const dx: number = Math.abs(current.x - end.x);
