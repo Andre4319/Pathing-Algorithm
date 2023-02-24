@@ -2,24 +2,89 @@ let fs = require('fs');
 import * as PNGSync from 'pngjs/lib/png-sync';
 import * as PNG from 'pngjs'
 
-type Color = {red: number, green: number, blue: number, alpha: number | undefined}
+/**
+ * Global Node type
+ */
+export type Node = { x: number, y: number, z?: number }
+
+/**
+ * Image file data
+ */
+interface Image {
+    fileName: string;
+    path?: string;
+}
+
+/**
+ * Dimensions of a given object
+ */
+interface Dimension {
+    width: number;
+    height: number;
+}
+
+/**
+ * The grid data for each map
+ */
+interface Grid {
+    columns: number;
+    rows: number;
+}
+
+/**
+ * Fixed nodes/positions for the origin and end nodes
+ */
+interface FixedNodes {
+    origin?: Node;
+    end?: Node;
+}
+
+/**
+ * Map data containing obstacles & all traversable nodes
+ */
+interface MapArray {
+    traversable: Node[];
+    obstacles?: Node[];
+}
+
+/**
+ * A correct traversable map with nodes
+ */
+interface TraversableMap {
+    fixedNodes: FixedNodes;
+    mapDimensions: Dimension;
+    traversableMaps: MapArray[];
+}
+
+/**
+ * Contains RGBA data
+ */
+interface Color {
+    red: number;
+    green: number;
+    blue: number;
+    alpha?: number;
+}
+
+/**
+ * A exception in case of loading a map is a failure 
+ */
+class InvalidMapException extends Error {}
+
+/**
+ * The fixed color defenitions.
+ * To add another you'll have to implement the handling of it
+ * @see getAllNodes
+ */
 const ColorDefenitions: Map<string, Color> = new Map<string, Color>([
-    ["map_background", {red: 255, green: 255, blue: 255, alpha: 255}],
-    ["map_border",     {red: 0,   green: 0,   blue: 0,   alpha: 255}],
-    ["map_obstacles",  {red: 0,   green: 0,   blue: 0,   alpha: 255}],
-    ["map_origin",     {red: 255, green: 0,   blue: 0,   alpha: 255}],
-    ["map_end",        {red: 0,   green: 255, blue: 0,   alpha: 255}],
-    ["path_correct",   {red: 169, green: 204, blue: 155, alpha: 255}],
-    ["path_searched",  {red: 255, green: 196, blue: 155, alpha: 255}],
+    ['map_background', {red: 255, green: 255, blue: 255, alpha: 255}],
+    ['map_border',     {red: 0,   green: 0,   blue: 0,   alpha: 255}],
+    ['map_obstacles',  {red: 0,   green: 0,   blue: 0,   alpha: 255}],
+    ['map_origin',     {red: 255, green: 0,   blue: 0,   alpha: 255}],
+    ['map_end',        {red: 0,   green: 255, blue: 0,   alpha: 255}],
+    ['path_correct',   {red: 169, green: 204, blue: 155, alpha: 255}],
+    ['path_searched',  {red: 255, green: 196, blue: 155, alpha: 255}],
 ]);
-export type Node = [ x: number, y: number, z: number | undefined ]
-type StaticNodes = { origin: Node, end: Node }
-
-type Image = { name: string, path: string }
-type Boundary = { width: number, height: number }
-
-type MapArray = { obstacles: Node[] | undefined, traversable: Node[] }
-export type TraversableMap = { static: StaticNodes, boundary: Boundary, allNodes: Map<number, MapArray> }
 
 /**
  * Global function to get a Node
@@ -28,19 +93,19 @@ export type TraversableMap = { static: StaticNodes, boundary: Boundary, allNodes
  * @param z coordinate or if it is undefined a 0
  * @returns a nodes position
  */
-export function getNode(x: number, y: number, z: number | undefined): Node {
-	return [x, y, z === undefined ? 0 : z];
+export function getNode(x: number, y: number, z: number = 0): Node {
+	return { x, y, z, };
 }
 
 /**
  * Global function to load an image and converts it to a traversable map
- * @param image The image to be
+ * @param image The image to be loaded
  * @param map_width The width of the maps
  * @param map_height The height of the maps
  * @returns A traverasble map
  */
 export function loadImage(image: Image, map_width: number, map_height: number): TraversableMap {
-    const buffer = fs.readFileSync(image.path + '/' + image.name);
+    const buffer = fs.readFileSync(`${image.path ?? './resources'}/${image.fileName}`);
     const png = PNGSync.read(buffer);
     const { width, height } = png;
 
@@ -54,18 +119,18 @@ export function loadImage(image: Image, map_width: number, map_height: number): 
  * @param searched What has been searched that isnt the correct path
  */
 export function drawPath(image: Image, correctPath: Array<Node>, searched: Array<Node>) {
-    const targetDirectory = image.path + '/' + image.name.split('.')[0] + '/';
+    const targetDirectory = image.path + '/' + image.fileName.split('.')[0] + '/';
     fs.mkdirSync(targetDirectory, { recursive: true });
 
-    fs.createReadStream(image.path + '/' + image.name)
+    fs.createReadStream(image.path + '/' + image.fileName)
         .pipe(new PNG.PNG({filterType: 4}))
         .on('parsed', function() {
             searched.forEach(node => {
-                fillNodebyColor(this, node, ColorDefenitions.get("path_searched"));
+                fillNodebyColor(this, node, ColorDefenitions.get('path_searched'));
             })
 
             correctPath.forEach(node => {
-                fillNodebyColor(this, node, ColorDefenitions.get("path_correct")); 
+                fillNodebyColor(this, node, ColorDefenitions.get('path_correct')); 
             });
             
             // Write the modified image to a file
@@ -75,81 +140,48 @@ export function drawPath(image: Image, correctPath: Array<Node>, searched: Array
 
 /**
  * Global function to create a new traversable map with the specified parameters
- * @param imageBoundry The dimensions of the new image
- * @param mapBoundary The dimensions of the maps
- * @param staticNodes The static nodes of the image
- * @param obstacles The nodes of all obstacles
- * @returns A traversable map and a new image
+ * @param imageDimension The dimension of the image
+ * @param mapDimensions The dimensions of each map
+ * @param fixedNodes The origin and end nodes
+ * @param obstacles Nodes which are obstacles
+ * @returns A new TraversableMap
  */
-export function createMap(imageBoundry: Boundary, mapBoundary: Boundary, staticNodes: StaticNodes, obstacles: Node[] | undefined): TraversableMap {
-    if(staticNodes.origin.toString() == staticNodes.end.toString()) {
-        throw new InvalidMapException("Origin and end points can't have the same position");
-    }
+export function createTraversableMap(imageDimension: Dimension, mapDimensions: Dimension, fixedNodes: FixedNodes, obstacles?: Node[]): TraversableMap {
+    const traversableMaps: MapArray[] = [];
+    
+    const grids: Grid = {
+        columns: Math.floor(imageDimension.width / mapDimensions.width), 
+        rows: Math.floor(imageDimension.height / mapDimensions.height),
+    };
 
-    if(imageBoundry.width < mapBoundary.width || imageBoundry.height < mapBoundary.height) {
-        throw new InvalidMapException("The image boundaries must exceed the map boundaries");
-    }
+    for (let z = 0; z < grids.columns + grids.rows; z++) {
+        const traversable: Node[] = [];
+        const allObstacles: Node[] = [];
+        for (let y = 0; y < mapDimensions.height; y++) {
+            for (let x = 0; x < mapDimensions.width; x++) {
+                const node: Node = { x, y, z, };
+                
+                if(obstacles === undefined || compare(obstacles, [])) {
+                    traversable.push(node);
+                } else {
 
-    const depth: [number, number] = [Math.floor(imageBoundry.width / mapBoundary.width), Math.floor(imageBoundry.height / mapBoundary.height)]
-    const png = new PNG.PNG({width: imageBoundry.width + depth[0] - 1, height: imageBoundry.height + depth[1] - 1});
-    let yDepth: number = 0;
-    const traversableMaps: Map<number, MapArray> = new Map<number, MapArray>(); 
+                    const isObstacle = obstacles.some(obstacle => {
+                        return obstacle.x === node.x && obstacle.y === node.y && obstacle.z === node.z;
+                    })
 
-    for(let y = 0; y < png.height; y++) {
-        let xDepth: number = 0;
-        for(let x = 0; x < png.width; x++) {
-            // Y MAP BORDER
-            if (x % mapBoundary.width === 0 && x != 0 && x != imageBoundry.width) {
-                fillNodebyColor(png, [x, y, undefined], ColorDefenitions.get("map_border"));
-                xDepth++;
-            // X MAP BORDER
-            } else if (y % mapBoundary.height === 0 && y != 0 && y != imageBoundry.height) {
-                fillNodebyColor(png, [x, y, undefined], ColorDefenitions.get("map_border"));
-                if(y >= mapBoundary.height * (yDepth + 1)) {
-                    yDepth++;
-                }
-            } else {
-                // OBSTACLES
-                if(obstacles != undefined) {
-                    const hasObstacles: boolean = obstacles.some(subArray => {
-                        let { newX, newY }: { newX: number; newY: number; } = getGridPosition(subArray, depth);
-                        return subArray.length === 3 && 
-                               subArray[0] + (mapBoundary.width * newX) + xDepth === x && // X
-                               subArray[1] + (mapBoundary.height * newY) + yDepth === y; // Y
-                    });
-                    if(hasObstacles) {
-                        fillNodebyColor(png, [x, y, undefined], ColorDefenitions.get("map_obstacles"));
-                        continue;
+                    if(isObstacle) {
+                        allObstacles.push(node);
+                    } else {
+                        traversable.push(node);
                     }
                 }
-                let originCoordinates = getGridPosition(staticNodes.origin, depth);
-                let endCoordinates = getGridPosition(staticNodes.end, depth);
-
-                // ORIGIN POINT
-                if(x === (mapBoundary.width * originCoordinates.newX) + xDepth + staticNodes.origin[0] && 
-                   y === (mapBoundary.height * originCoordinates.newY) + yDepth + staticNodes.origin[1]) {
-                    fillNodebyColor(png, [x, y, undefined], ColorDefenitions.get("map_origin"))
-                    continue;
-                }
-
-                // END POINT
-                if(x === (mapBoundary.width * endCoordinates.newX) + xDepth + staticNodes.end[0] && 
-                   y === (mapBoundary.height * endCoordinates.newY) + yDepth + staticNodes.end[1]) { 
-                    fillNodebyColor(png, [x, y, undefined], ColorDefenitions.get("map_end"))
-                    continue;
-                }
-                // FILL IN WHITE
-                fillNodebyColor(png, [x, y, undefined], ColorDefenitions.get("map_background"))
             }
         }
+        traversableMaps.push({traversable, obstacles: allObstacles})
     }
 
-    // CREATES THE IMAGE FILE
-    const outStream = fs.createWriteStream('./resources/output.png');
-    png.pack().pipe(outStream);
 
-    return { static: staticNodes, boundary: imageBoundry, allNodes: traversableMaps }
-    
+    return { fixedNodes, mapDimensions, traversableMaps };
 }
 
 /**
@@ -158,59 +190,80 @@ export function createMap(imageBoundry: Boundary, mapBoundary: Boundary, staticN
  * @param predicate If you wish to have custom symbols
  * @returns The entire map as a string
  */
-export function convertMapToString(map: TraversableMap, predicate: (base: string, node: Node) => string): string {
-    const origin_symbol = ' S ', end_symbol = ' E ', obstacle_symbol = ' O ', node_symbol = ' - '
-    let xp = "";
-    for(let y = 0; y < map.boundary.height; y++) {
-        for(let x = 0; x < map.boundary.width; x++) {
-            const hasObstacles: boolean = map.allNodes.get(0).obstacles.some(subArray => {
-                return subArray.length === 3 && 
-                       subArray[0] === x && // X
-                       subArray[1] === y; // Y
-            });
+export function convertMapToString(map: TraversableMap, predicate: (node: Node) => string): string[][] {
+    const SYMBOLS = {
+        origin:   ' S ',
+        end:      ' E ',
+        obstalce: ' O ',
+        node:     ' - ',
+    };
 
-            if(hasObstacles) {
-                xp += obstacle_symbol;
-            } else {
-                if(x === map.static.origin[0] && y === map.static.origin[1]) {
-                    xp += origin_symbol;
-                } else if(x === map.static.end[0] && y === map.static.end[1]) {
-                    xp += end_symbol;
+    const maps: string[][] = [];
+
+    for(const { obstacles, traversable } of map.traversableMaps) {
+        let mapString: string = '';
+
+        for(let y = 0; y < map.mapDimensions.height; y++) {
+            for(let x = 0; x < map.mapDimensions.width; x++) {
+                const node: Node = { x, y }
+
+                const isObstacle: boolean = obstacles?.some(({x: obstacleX, y: obstacleY }) => {
+                    return obstacleX === x &&
+                           obstacleY === y;
+                });
+
+                if(isObstacle) {
+                    mapString += SYMBOLS.obstalce;
                 } else {
-                    const customSymbol = predicate(node_symbol, getNode(x, y, 0));
-                    xp += customSymbol === '' ? node_symbol : customSymbol;
+                    if(compare(node, map.fixedNodes.origin)) {
+                        mapString += SYMBOLS.origin;
+                    } else if(compare(node, map.fixedNodes.end)) {
+                        mapString += SYMBOLS.end;
+                    } else {
+                        const customSymbol = predicate({ ...node});
+                        mapString += customSymbol === '' ? SYMBOLS.node : customSymbol;
+                    }
                 }
             }
+
+            mapString += '\n';
         }
-        xp += '\n'
+        maps.push(mapString.trimEnd().split('\n'));
     }
 
-    return xp;
+    return maps;
 }
 
 /**
- * Given a node with depth (z) you can extract the position in a 2d grid
- * @param node To search
- * @param depth The depth of the map
- * @returns x & y coordinates
+ * Compares two objects
+ * @param first object
+ * @param second object
+ * @returns if the first and second are equal
  */
-function getGridPosition(node: Node, depth: [number, number]): { newX: number, newY: number} {
-    let newX: number = 0, newY: number = 0;
-    const depthCheck = depth[1] === 1 ? depth[0] : depth[1];
-    if (node[2] === 0) { // FIRST GRID
-        newX = 0;
-        newY = 0;
-    } else if (node[2] < depthCheck) { // TOP GRIDS
-        newX = depth[0] - node[2];
-        newY = 0; 
-    } else if (node[2] === depth[0]) { // AFTER ALL TOP GRIDS
-        newX = 0;
-        newY++;
-    } else { // BOTTOM GRIDS
-        newX = node[2] - depth[0];
-        newY++;
+function compare<T>(first: T, second: T): boolean {
+    const keys = Object.keys(first) as Array<keyof T>;
+    return keys.every(key => first[key] == second[key]);
+}
+
+/**
+ * Given a node with depth (z) / independent position you can extract the global position in a 2d grid
+ * @param node Where is the node located
+ * @param mapDimensions The dimensions of each map
+ * @param grids How many grids are there
+ * @returns The global node
+ */
+function getGridPosition(node: Node, mapDimensions: Dimension, grids: Grid): Node {
+    const { columns, rows } = grids;
+
+    let newY = 0;
+    let newX = (node.z ?? 0) % grids.columns;
+    
+    if(node.z && node.z >= columns && node.z <= columns * rows) {
+        newY = Math.floor(node.z / columns);
     }
-    return { newX, newY };
+    
+    return { x: node.x + mapDimensions.width * newX, 
+             y: node.y + mapDimensions.height * newY, };
 }
 
 /**
@@ -222,7 +275,7 @@ function getGridPosition(node: Node, depth: [number, number]): { newX: number, n
  * @param blue color between 0 -255
  */
 function fillNode(png:any, node: Node, red: number, green: number, blue: number, alpha: number) {
-    const idx: number = (png.width * node[1] + node[0]) << 2
+    const idx: number = (png.width * node[1] + node[0]) << 2;
     png.data[idx] = limit(red, 0, 255);
     png.data[idx + 1] = limit(green, 0, 255);
     png.data[idx + 2] = limit(blue, 0, 255);
@@ -236,7 +289,7 @@ function fillNode(png:any, node: Node, red: number, green: number, blue: number,
  * @param color The color values
  */
 function fillNodebyColor(png:any, node: Node, color: Color) {
-    fillNode(png, node, color.red, color.blue, color.green, color.alpha === undefined ? 255 : color.alpha);
+    fillNode(png, node, color.red, color.blue, color.green, color.alpha);
 }
 
 /**
@@ -247,48 +300,56 @@ function fillNodebyColor(png:any, node: Node, color: Color) {
  * @returns The value or min/max
  */
 function limit(value: number, min: number, max: number): number {
-    return value < min ? min : value > max ? max : value;
+    if (value < min) {
+        return min;
+    } else if (value > max) {
+        return max;
+    } else {
+        return value;
+    }
 }
 
 /**
- * A exception in case of loading a map is a failure 
- * @param message The message to be thrown
+ * Retrieves all nodes (origin and end points, all obstacles and traversable nodes)
+ * @param png The png instance
+ * @param z What depth to search in
+ * @param grids How many grids are there
+ * @param imageDimension The dimension of the image
+ * @param mapDimensions The dimensions of each map
+ * @returns All fixed nodes, all obstacles and traversable nodes
  */
-function InvalidMapException(message: string) {
-    this.message = message;
-    this.name = "InvalidMapException";
-}
+function getAllNodes(png: any, z: number, imageDimension: Dimension, mapDimensions: Dimension, grids: Grid): { fixedNodes: FixedNodes; allNodes: MapArray } {
+    const positionData: { fixedNodes: FixedNodes;  allNodes: MapArray } = {
+        fixedNodes: { origin: undefined, end: undefined },
+        allNodes:   { traversable: [], obstacles: [] },
+    };
 
-/**
- * Gets all nodes (origin and end points, all obstacles and traversable nodes)
- * @param png The image
- * @param imageBoundry The images boundries 
- * @param startPos Map starting nodes
- * @param mapBoundary The maps boundries
- * @returns All nodes in the image
- */
-function getAllNodes(png: any, imageBoundry: Boundary, startPos: Node, mapBoundary: Boundary): {static: StaticNodes, allNodes: {obstacles: Node[], traversable: Node[]}} {
-    const positionData = {static: {origin: undefined, end: undefined}, allNodes: {obstacles: [], traversable: []}};
+    let min: Node = getGridPosition({x: 0, y: 0, z}, mapDimensions, grids);
 
-    for (let y = startPos[1]; y < startPos[1] + mapBoundary.height; y++) {
-        for (let x = startPos[0]; x < startPos[0] + mapBoundary.width; x++) {
-            const idx = (imageBoundry.width * y + x) << 2;
+    for (let y = min.y; y < min.y + mapDimensions.height; y++) {
+        for (let x = min.x; x < min.x + mapDimensions.width; x++) {
+            const idx = (imageDimension.width * y + x) << 2;
             
             // RGB VALUES
-            const pixelColor: Color = {red: png.data[idx], green: png.data[idx + 1], blue: png.data[idx + 2], alpha: 255}
+            const pixelColor: Color = { 
+                red: png.data[idx], 
+                green: png.data[idx + 1], 
+                blue: png.data[idx + 2], 
+                alpha: 255,
+            };
 
-            const originColor = ColorDefenitions.get("map_origin");
-            const endColor = ColorDefenitions.get("map_end");
-            const mapColor = ColorDefenitions.get("map_background");
+            const originColor: Color = ColorDefenitions.get('map_origin');
+            const endColor: Color = ColorDefenitions.get('map_end');
+            const mapColor: Color = ColorDefenitions.get('map_background');
 
-            if(pixelColor.red == mapColor.red && pixelColor.green == mapColor.green && pixelColor.blue == mapColor.blue) {
-                positionData.allNodes.traversable.push(getNode(x,y,startPos[2]));
-            } else if(pixelColor.red == originColor.red && pixelColor.green == originColor.green && pixelColor.blue == originColor.blue) {
-                positionData.static.origin = getNode(x,y,startPos[2]);
-            } else if(pixelColor.red == endColor.red && pixelColor.green == endColor.green && pixelColor.blue == endColor.blue) {
-                positionData.static.end = getNode(x,y,startPos[2]);
+            if(compare(mapColor, pixelColor)) {
+                positionData.allNodes.traversable.push(getNode(x,y,z));
+            } else if(compare(originColor, pixelColor)) {
+                positionData.fixedNodes.origin = getNode(x,y,z);
+            } else if(compare(endColor, pixelColor)) {
+                positionData.fixedNodes.end = getNode(x,y,z);
             } else {
-                positionData.allNodes.obstacles.push(getNode(x,y,startPos[2]));
+                positionData.allNodes.obstacles.push(getNode(x,y,z));
             }
         }
     }
@@ -297,42 +358,42 @@ function getAllNodes(png: any, imageBoundry: Boundary, startPos: Node, mapBounda
 }
 
 /**
- * Converts the given image to a traversable map
- * @param png The image
- * @param imageBoundry The images boundries
- * @param mapBoundary The maps boundries
- * @returns A traverasble map
+ * Loads an image and creates a new traversable map
+ * @param png The png instance
+ * @param imageDimension The dimension of the image
+ * @param mapDimensions The dimensions of each map
+ * @returns A new TraversableMap
  */
-function load(png: any, imageBoundry: Boundary, mapBoundary: Boundary): TraversableMap {
-    const depth: [number, number] = [Math.floor(imageBoundry.width / mapBoundary.width), Math.floor(imageBoundry.height / mapBoundary.height)]
-    const staticNodes: StaticNodes = { origin: undefined, end: undefined }
-    let z: number = 0;
-    const traversableMaps: Map<number, MapArray> = new Map<number, MapArray>();
+function load(png: any, imageDimension: Dimension, mapDimensions: Dimension): TraversableMap {
+    const grids: Grid = {
+        columns: Math.floor(imageDimension.width / mapDimensions.width), 
+        rows: Math.floor(imageDimension.height / mapDimensions.height),
+    };
+    const fixedNodes: FixedNodes = {};
+    const traversableMaps: MapArray[] = [];
 
-    for (let y = 0; y < depth[1]; y++) {
-        for (let x = 0; x < depth[0]; x++) {
-            const zWidth: number = mapBoundary.width * x + (x !== 0 ? 1 : 0);
-            const zHeight: number = mapBoundary.height * y + (y !== 0 ? 1 : 0);
-            
-            const nodes = getAllNodes(png, imageBoundry, getNode(zWidth, zHeight, z), mapBoundary)
-            const map: MapArray = { obstacles: nodes.allNodes.obstacles, traversable: nodes.allNodes.traversable }
+    for (let z = 0; z < (grids.columns + grids.rows - 2) + 1; z++) {
+        for (let y = 0; y < grids.rows; y++) {
+            for (let x = 0; x < grids.columns; x++) { 
+                const nodes: { fixedNodes: FixedNodes; allNodes: MapArray; } = getAllNodes(png, z, imageDimension, mapDimensions, grids);
+                const map: MapArray = { traversable: nodes.allNodes.traversable, obstacles: nodes.allNodes.obstacles };
+                
+                if(nodes.fixedNodes.origin != undefined) {
+                    fixedNodes.origin = nodes.fixedNodes.origin;
+                }
+    
+                if(nodes.fixedNodes.end != undefined) {
+                    fixedNodes.end = nodes.fixedNodes.end;
+                }
 
-            if(nodes.static.origin != undefined) {
-                staticNodes.origin = nodes.static.origin;
+                traversableMaps.push(map);
             }
-
-            if(nodes.static.end != undefined) {
-                staticNodes.end = nodes.static.end;
-            }
-
-            traversableMaps.set(z, map);
-            z++;
         }
     }
 
-    if(staticNodes === undefined || staticNodes.origin === undefined || staticNodes.end === undefined) {
+    if(fixedNodes === undefined || fixedNodes.origin === undefined || fixedNodes.end === undefined) {
         throw new InvalidMapException("Can't obtain a start and/or 'end' positions");
     } else {
-        return { static: staticNodes, boundary: imageBoundry, allNodes: traversableMaps }
+        return { fixedNodes, mapDimensions, traversableMaps, };
     }
 }
