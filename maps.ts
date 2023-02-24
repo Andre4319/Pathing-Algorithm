@@ -100,16 +100,16 @@ export function getNode(x: number, y: number, z: number = 0): Node {
 /**
  * Global function to load an image and converts it to a traversable map
  * @param image The image to be loaded
- * @param map_width The width of the maps
- * @param map_height The height of the maps
+ * @param mapWidth The width of the maps
+ * @param mapHeight The height of the maps
  * @returns A traverasble map
  */
-export function loadImage(image: Image, map_width: number, map_height: number): TraversableMap {
+export function loadImage(image: Image, mapWidth: number, mapHeight: number): TraversableMap {
     const buffer = fs.readFileSync(`${image.path ?? './resources'}/${image.fileName}`);
     const png = PNGSync.read(buffer);
     const { width, height } = png;
 
-    return load(png, {width, height}, {width: map_width, height: map_height});
+    return load(png, {width, height}, {width: mapWidth, height: mapHeight});
 }
 
 /**
