@@ -9,7 +9,7 @@ to an endpoint in a two-dimensional grid containing nontraversable
 obstacles.
 
 # Goals:
-- [ ] Week 1: Creating a grid with objects representing points (traversed
+- [X] Week 1: Creating a grid with objects representing points (traversed
 and not yet traversed), obstacles (nontraversable), and starting points
 and endpoints. Creating a visual representation of the traversal from
 one point to another.
@@ -17,7 +17,7 @@ one point to another.
 - [ ] Week 2-3: Creating a reasonably efficient algorithm for finding a path
 from a starting point to an endpoint.
 
-- [ ] Optional: Adding more grids (maps with different obstacles) to test
+- [X] Optional: Adding more grids (maps with different obstacles) to test
 the algorithm.
 
 - [ ] Optional: Refining the algorithm.
