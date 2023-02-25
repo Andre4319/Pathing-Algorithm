@@ -405,18 +405,18 @@ function limit(value: number, min: number, max: number): number {
  * Retrieves all nodes (origin and end points, all obstacles and traversable nodes)
  * @param png The png instance
  * @param z What depth to search in
- * @param grids How many grids are there
+ * @param grid How many grids are there
  * @param imageDimension The dimension of the image
  * @param mapDimensions The dimensions of each map
  * @returns All fixed nodes, all obstacles and traversable nodes
  */
-function getAllNodes(png: any, z: number, imageDimension: Dimension, mapDimensions: Dimension, grids: Grid): { fixedNodes: FixedNodes; allNodes: MapArray } {
+function getAllNodes(png: any, z: number, imageDimension: Dimension, mapDimensions: Dimension, grid: Grid): { fixedNodes: FixedNodes; allNodes: MapArray } {
     const positionData: { fixedNodes: FixedNodes;  allNodes: MapArray } = {
         fixedNodes: { origin: undefined, end: undefined },
         allNodes:   { traversable: [], obstacles: [] },
     };
 
-    let min: Node = getGlobalNode({x: 0, y: 0, z}, mapDimensions, grids);
+    let min: Node = getGlobalNode({x: 0, y: 0, z}, mapDimensions, grid);
 
     for (let y = min.y; y < min.y + mapDimensions.height; y++) {
         for (let x = min.x; x < min.x + mapDimensions.width; x++) {
