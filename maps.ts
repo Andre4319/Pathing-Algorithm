@@ -121,7 +121,7 @@ export function loadImage(image: Image, mapWidth: number, mapHeight: number): Tr
  * @param correctPath The quickest path from the origin to the end point specified by an algorithm 
  * @param searched What has been searched that isnt the correct path
  */
-function drawPath(image: Image, mapDimensions: Dimension, correctPath: Array<Node>, searched: Array<Node>) {
+export function drawPath(image: Image, mapDimensions: Dimension, correctPath: Array<Node>, searched: Array<Node>) {
     const path = image.path ?? './resources';
     const targetDirectory = path + '/' + image.fileName.split('.')[0] + '/';
     fs.mkdirSync(targetDirectory, { recursive: true });
