@@ -115,10 +115,6 @@ export function loadImage(image: Image, mapWidth: number, mapHeight: number): Tr
     return load(image, png, {width, height}, {width: mapWidth, height: mapHeight});
 }
 
-drawPath({fileName: 'test.png'}, {width: 9, height: 9}, [getNode(1, 6), getNode(1, 5), getNode(1, 4), getNode(1, 3), getNode(1, 2), getNode(1, 1), getNode(2, 1), getNode(3, 1), getNode(4, 1), getNode(5, 1), getNode(6, 1)], 
-                                                        [getNode(2, 6), getNode(2, 7), getNode(2, 8)]);
-drawPath({fileName: 'new.png'}, {width: 9, height: 9}, [getNode(4, 4, 3), getNode(4, 3, 3), getNode(4, 2, 3), getNode(4, 1, 3), getNode(4, 1, 1), getNode(3, 1, 1), getNode(2, 1, 1)], 
-                                                       [getNode(2, 6), getNode(2, 7), getNode(2, 8)])
 /**
  * Global function to draw a path with the specified parameters
  * @param image The image to be drawn upon
