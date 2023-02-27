@@ -1,7 +1,7 @@
 let fs = require('fs');
 import * as PNGSync from 'pngjs/lib/png-sync';
 import * as PNG from 'pngjs'
-import { type Node, type Dimension, type Grid, getRelativeNode } from './Position';
+import { type Node, type Dimension, type Grid, createGrid, getRelativeNode } from './Position';
 import { equals, limit } from './Util';
 
 /**
@@ -55,7 +55,6 @@ enum ColorKey {
 /**
  * The fixed color defenitions.
  * To add another you'll have to implement the handling of it
- * @see getAllNodes
  */
 const ColorDefenitions: Map<string, Color> = new Map<string, Color>([
     [ColorKey.MapBackground, { red: 255, green: 255, blue: 255, alpha: 255 }],
@@ -160,7 +159,7 @@ export class TraversableMap {
 
         
 
-        for (let z = 0; z <= (this.grid.columns + this.grid.rows - 2) + 1; z++) {
+        for (let z = 0; z <= (this.grid.columns * this.grid.rows - 2) + 1; z++) {
             const obstaclt: Node[] = [];
             const travert: Node[] = [];
             obstacle.forEach(v => {
@@ -176,6 +175,35 @@ export class TraversableMap {
             })
             this.depthMap.set(z, {traversable: travert, obstacles: obstaclt});
         }
+    }
+
+    /**
+     * Gets a node and returns its type
+     * @param x position
+     * @param y position
+     * @param z position
+     * @returns node type and position
+     */
+    public getNode(x: number, y: number, z: number): { type: string, node: Node } | undefined {
+        if(z >= this.allNodes.length) {
+            return undefined;
+        }
+        
+        const node: Node =  {x, y, z}
+        let type = '';
+
+        if(equals(this.fixedNodes.origin, node)) {
+            type = 'origin'
+        } else if(equals(this.fixedNodes.end, node)) {
+            type = 'end'
+        } else if(this.allNodes[z].traversable.some(v => { return v.x === x && v.y === y})) {
+            type = 'traversable'
+        } else {
+            type = 'non-traversable'
+        }
+
+        return { type, node }
+
     }
 
     /**
@@ -287,5 +315,4 @@ export class TraversableMap {
     
         console.log(maps);
     }
-
 }
