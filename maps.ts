@@ -1,11 +1,10 @@
+// DEPRECATED
+// USE 'TraversableMap.ts' INSTEAD
 let fs = require('fs');
 import * as PNGSync from 'pngjs/lib/png-sync';
 import * as PNG from 'pngjs'
-
-/**
- * Global Node type
- */
-export type Node = { x: number, y: number, z?: number }
+import { type Node, type Dimension, type Grid, createNode, getRelativeNode, getGlobalNode } from './Position';
+import { equals, limit } from './Util';
 
 /**
  * Image file data
@@ -13,22 +12,6 @@ export type Node = { x: number, y: number, z?: number }
 interface Image {
     fileName: string;
     path?: string;
-}
-
-/**
- * Dimensions of a given object
- */
-interface Dimension {
-    width: number;
-    height: number;
-}
-
-/**
- * The grid data for each map
- */
-interface Grid {
-    columns: number;
-    rows: number;
 }
 
 /**
@@ -50,7 +33,7 @@ interface MapArray {
 /**
  * A correct traversable map with nodes
  */
-interface TraversableMap {
+interface ITraversableMap {
     image: Image;
     fixedNodes: FixedNodes;
     mapDimensions: Dimension;
@@ -61,7 +44,7 @@ interface TraversableMap {
 /**
  * Contains RGBA data
  */
-interface Color {
+type color = {
     red: number;
     green: number;
     blue: number;
@@ -73,31 +56,30 @@ interface Color {
  */
 class InvalidMapException extends Error {}
 
+enum ColorKey {
+    MapBackground = 'map_background',
+    MapBorder = 'map_border',
+    MapObstacles = 'map_obstacles',
+    MapOrigin = 'map_origin',
+    MapEnd = 'map_end',
+    PathCorrect = 'path_correct',
+    PathSearched = 'path_searched',
+}
+
 /**
  * The fixed color defenitions.
  * To add another you'll have to implement the handling of it
  * @see getAllNodes
  */
-const ColorDefenitions: Map<string, Color> = new Map<string, Color>([
-    ['map_background', {red: 255, green: 255, blue: 255, alpha: 255}],
-    ['map_border',     {red: 23,  green: 23,  blue: 23,  alpha: 255}],
-    ['map_obstacles',  {red: 0,   green: 0,   blue: 0,   alpha: 255}],
-    ['map_origin',     {red: 255, green: 0,   blue: 0,   alpha: 255}],
-    ['map_end',        {red: 0,   green: 255, blue: 0,   alpha: 255}],
-    ['path_correct',   {red: 169, green: 204, blue: 155, alpha: 255}],
-    ['path_searched',  {red: 255, green: 196, blue: 155, alpha: 255}],
+const ColorDefenitions: Map<string, color> = new Map<string, color>([
+    [ColorKey.MapBackground, { red: 255, green: 255, blue: 255, alpha: 1 }],
+    [ColorKey.MapBorder,     { red: 23,  green: 23,  blue: 23,  alpha: 1 }],
+    [ColorKey.MapObstacles,  { red: 0,   green: 0,   blue: 0,   alpha: 1 }],
+    [ColorKey.MapOrigin,     { red: 255, green: 0,   blue: 0,   alpha: 1 }],
+    [ColorKey.MapEnd,        { red: 0,   green: 255, blue: 0,   alpha: 1 }],
+    [ColorKey.PathCorrect,   { red: 169, green: 204, blue: 155, alpha: 1 }],
+    [ColorKey.PathSearched,  { red: 255, green: 196, blue: 155, alpha: 1 }],
 ]);
-
-/**
- * Global function to get a Node
- * @param x coordinate
- * @param y coordinate
- * @param z coordinate or if it is undefined a 0
- * @returns a nodes position
- */
-export function getNode(x: number, y: number, z: number = 0): Node {
-	return { x, y, z, };
-}
 
 /**
  * Global function to load an image and converts it to a traversable map
@@ -106,7 +88,7 @@ export function getNode(x: number, y: number, z: number = 0): Node {
  * @param mapHeight The height of the maps
  * @returns A traverasble map
  */
-export function loadImage(image: Image, mapWidth: number, mapHeight: number): TraversableMap {
+export function loadImage(image: Image, mapWidth: number, mapHeight: number): ITraversableMap {
     const fullImage: Image = {fileName: image.fileName, path: image.path ?? './resources'}
     const buffer = fs.readFileSync(`${fullImage.path}/${fullImage.fileName}`);
     const png = PNGSync.read(buffer);
@@ -150,7 +132,7 @@ export function drawPath(image: Image, mapDimensions: Dimension, correctPath: Ar
  * @param obstacles Nodes which are obstacles
  * @returns A new TraversableMap
  */
-export function createTraversableMap(image: Image, imageDimension: Dimension, mapDimensions: Dimension, fixedNodes: FixedNodes, obstacles?: Node[]): TraversableMap {
+export function createTraversableMap(image: Image, imageDimension: Dimension, mapDimensions: Dimension, fixedNodes: FixedNodes, obstacles?: Node[]): ITraversableMap {
     const traversableMaps: MapArray[] = [];
     let yDepth = 0;
     const grid: Grid = getGrid(imageDimension, mapDimensions);
@@ -184,19 +166,19 @@ export function createTraversableMap(image: Image, imageDimension: Dimension, ma
             const origin = getGlobalNode(fixedNodes.origin, mapDimensions, grid);
             const end = getGlobalNode(fixedNodes.end, mapDimensions, grid);
 
-            if(compare(globalNode, {x: origin.x + xDepth, y: origin.y + yDepth})) {
+            if(equals(globalNode, {x: origin.x + xDepth, y: origin.y + yDepth})) {
                 fillNodebyColor(png, mapDimensions, globalNode, ColorDefenitions.get('map_origin'), false)
                 continue;
             } 
 
-            if(compare(globalNode, {x: end.x + xDepth, y: end.y + yDepth})) {
+            if(equals(globalNode, {x: end.x + xDepth, y: end.y + yDepth})) {
                 fillNodebyColor(png, mapDimensions, globalNode, ColorDefenitions.get('map_end'), false)
                 continue;
             }
 
-            if(obstacles === undefined || compare(obstacles, [])) { continue; }
+            if(obstacles === undefined || equals(obstacles, [])) { continue; }
 
-            const isObstacle = obstacles.some(obstacle => { const obst = getGlobalNode(obstacle, mapDimensions, grid); return compare(globalNode, {x: obst.x + xDepth, y: obst.y + yDepth})});
+            const isObstacle = obstacles.some(obstacle => { const obst = getGlobalNode(obstacle, mapDimensions, grid); return equals(globalNode, {x: obst.x + xDepth, y: obst.y + yDepth})});
 
             if(isObstacle) {
                 fillNodebyColor(png, mapDimensions, globalNode, ColorDefenitions.get('map_obstacles'), false)
@@ -222,7 +204,7 @@ export function createTraversableMap(image: Image, imageDimension: Dimension, ma
  * @param predicate If you wish to have custom symbols
  * @returns The entire map as a string
  */
-export function convertMapToString(map: TraversableMap, predicate: (node: Node) => string): string[][] {
+export function convertMapToString(map: ITraversableMap, predicate: (node: Node) => string): string[][] {
     const SYMBOLS = {
         origin:   ' S ',
         end:      ' E ',
@@ -247,9 +229,9 @@ export function convertMapToString(map: TraversableMap, predicate: (node: Node) 
                 if(isObstacle) {
                     mapString += SYMBOLS.obstalce;
                 } else {
-                    if(compare(node, map.fixedNodes.origin)) {
+                    if(equals(node, map.fixedNodes.origin)) {
                         mapString += SYMBOLS.origin;
-                    } else if(compare(node, map.fixedNodes.end)) {
+                    } else if(equals(node, map.fixedNodes.end)) {
                         mapString += SYMBOLS.end;
                     } else {
                         const customSymbol = predicate({ ...node});
@@ -267,17 +249,6 @@ export function convertMapToString(map: TraversableMap, predicate: (node: Node) 
 }
 
 /**
- * Compares two objects
- * @param first object
- * @param second object
- * @returns if the first and second are equal
- */
-function compare<T>(first: T, second: T): boolean {
-    const keys = Object.keys(first) as Array<keyof T>;
-    return keys.every(key => first[key] == second[key]);
-}
-
-/**
  * Gets the grid size of the image
  * @param imageDimension The dimension of the image
  * @param mapDimensions The dimensions of each map
@@ -290,59 +261,6 @@ function getGrid(imageDimension: Dimension, mapDimensions: Dimension): Grid {
     };
 }
 
-/**
- * Given a node with depth (z) / independent position you can extract the global position in a 2d grid
- * @param relativeNode Where is the node located
- * @param mapDimensions The dimensions of each map
- * @param grid How many grids are there
- * @returns The global node
- */
-function getGlobalNode(relativeNode: Node, mapDimensions: Dimension, grid: Grid): Node {
-    const { columns, rows } = grid;
-
-    let newY = 0;
-    let newX = (relativeNode.z ?? 0) % grid.columns;
-    
-    if(relativeNode.z && relativeNode.z >= columns && relativeNode.z <= columns * rows) {
-        newY = Math.floor(relativeNode.z / columns);
-    }
-    
-    return { x: relativeNode.x + mapDimensions.width * newX, 
-             y: relativeNode.y + mapDimensions.height * newY, };
-}
-
-/**
- * Given a global node without depth. You can extract the relative position inside each grid
- * @param globalNode The X and Y coordinate in the image
- * @param mapDimensions The dimensions of each map
- * @returns The X, Y and Z positions
- */
-function getRelativeNode(globalNode: Node, mapDimensions: Dimension): Node {
-    const relativeX = globalNode.x % mapDimensions.width;
-    const relativeY = globalNode.y % mapDimensions.height;
-    let relativeZ = 0;
-    let columnDepth = 0;
-
-    if(globalNode.y > mapDimensions.height) {
-        for (let y = globalNode.y - relativeY; y > 0 ; y -= mapDimensions.height) {
-            for (let x = globalNode.x - relativeX; x > 0 ; x -= mapDimensions.width) {
-                relativeZ++;
-            }
-            columnDepth++;
-            relativeZ++;
-        }
-    
-        for(let column = 0; column < columnDepth; column++) {
-            relativeZ++;
-        }
-    } else {
-        for (let x = globalNode.x - relativeX; x > 0 ; x -= mapDimensions.width) {
-            relativeZ++;
-        }
-    }
-    
-    return {x: relativeX, y: relativeY, z: relativeZ}
-}
 
 /**
  * Colors in a node with a given position
@@ -358,7 +276,7 @@ function fillNode(png:any, mapDimensions: Dimension, node: Node, red: number, gr
     png.data[idx] = limit(red, 0, 255);
     png.data[idx + 1] = limit(green, 0, 255);
     png.data[idx + 2] = limit(blue, 0, 255);
-    png.data[idx + 3] = limit(alpha, 0, 255);
+    png.data[idx + 3] = Math.floor(255 * limit(alpha, 0, 1));
 }
 
 /**
@@ -368,7 +286,7 @@ function fillNode(png:any, mapDimensions: Dimension, node: Node, red: number, gr
  * @param color The color values
  * @param adjustForBorder If the nodes positions should be adjusted in accordance with map borders
  */
-function fillNodebyColor(png:any, mapDimensions: Dimension, globalNode: Node, color: Color, adjustForBorder: boolean) {
+function fillNodebyColor(png:any, mapDimensions: Dimension, globalNode: Node, color: color, adjustForBorder: boolean) {
     if(adjustForBorder) {
         let yDepth = 0;
         let xDepth = 0;
@@ -382,23 +300,6 @@ function fillNodebyColor(png:any, mapDimensions: Dimension, globalNode: Node, co
         return fillNode(png, mapDimensions, { x: globalNode.x + xDepth - 1, y: globalNode.y + yDepth - 1 }, color.red, color.green, color.blue, color.alpha);
     }
     return fillNode(png, mapDimensions, globalNode, color.red, color.green, color.blue, color.alpha);
-}
-
-/**
- * Limits a value to a minimum value and a maximum value
- * @param value To compare
- * @param min Value can't be less this value
- * @param max Value can't exceed this value
- * @returns The value or min/max
- */
-function limit(value: number, min: number, max: number): number {
-    if (value < min) {
-        return min;
-    } else if (value > max) {
-        return max;
-    } else {
-        return value;
-    }
 }
 
 /**
@@ -423,26 +324,26 @@ function getAllNodes(png: any, z: number, imageDimension: Dimension, mapDimensio
             const idx = (imageDimension.width * y + x) << 2;
             
             // RGB VALUES
-            const pixelColor: Color = { 
+            const pixelColor: color = { 
                 red: png.data[idx], 
                 green: png.data[idx + 1], 
                 blue: png.data[idx + 2], 
                 alpha: 255,
             };
 
-            const originColor: Color = ColorDefenitions.get('map_origin');
-            const endColor: Color    = ColorDefenitions.get('map_end');
-            const mapColor: Color    = ColorDefenitions.get('map_background');
-            const mapObstacle: Color = ColorDefenitions.get('map_obstacles');
+            const originColor: color = ColorDefenitions.get(ColorKey.MapOrigin);
+            const endColor: color    = ColorDefenitions.get(ColorKey.MapEnd);
+            const mapColor: color    = ColorDefenitions.get(ColorKey.MapBackground);
+            const mapObstacle: color = ColorDefenitions.get(ColorKey.MapObstacles);
 
-            if(compare(mapColor, pixelColor)) {
-                positionData.allNodes.traversable.push(getNode(x,y,z));
-            } else if(compare(originColor, pixelColor)) {
-                positionData.fixedNodes.origin = getNode(x,y,z);
-            } else if(compare(endColor, pixelColor)) {
-                positionData.fixedNodes.end = getNode(x,y,z);
-            } else if(compare(mapObstacle, pixelColor)) {
-                positionData.allNodes.obstacles.push(getNode(x,y,z));
+            if(equals(mapColor, pixelColor)) {
+                positionData.allNodes.traversable.push(createNode(x,y,z));
+            } else if(equals(originColor, pixelColor)) {
+                positionData.fixedNodes.origin = createNode(x,y,z);
+            } else if(equals(endColor, pixelColor)) {
+                positionData.fixedNodes.end = createNode(x,y,z);
+            } else if(equals(mapObstacle, pixelColor)) {
+                positionData.allNodes.obstacles.push(createNode(x,y,z));
             }
         }
     }
@@ -457,7 +358,7 @@ function getAllNodes(png: any, z: number, imageDimension: Dimension, mapDimensio
  * @param mapDimensions The dimensions of each map
  * @returns A new TraversableMap
  */
-function load(image: Image, png: any, imageDimension: Dimension, mapDimensions: Dimension): TraversableMap {
+function load(image: Image, png: any, imageDimension: Dimension, mapDimensions: Dimension): ITraversableMap {
     const grid: Grid = getGrid(imageDimension, mapDimensions);
     const fixedNodes: FixedNodes = {};
     const traversableMaps: MapArray[] = [];
