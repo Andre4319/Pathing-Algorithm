@@ -1,141 +1,148 @@
 // A* Search Algorithm
 
-/* Comments:
- * Unsure if g-cost should be calculated similarly to h-cost or in some way accumulatively
- * Unsure if path from start to end needs its own variable/method, or if the end node's subsequent parents are supposed to form the full path (line 72)
- * Unsure what it means to check "If new path to adjacent node is shorter" (line 80)
- */
-
 // Node structure
 type gNode = {
-    x: number; // x-coordinate
-    y: number; // y-coordinate
-    g: number; // distance/movement cost from start to node
-    h: number; // distance/movement cost from node to end
-    f: number; // the sum of g and h
-    parent?: gNode; // A potential parent node consisting of several nodes, thus forming a path
+    x: number, // x-coordinate
+    y: number, // y-coordinate
+    g: number, // distance/movement cost from start to node
+    h: number, // distance/movement cost from node to end
+    f: number, // the sum of g and h
+    parent?: gNode // A parent node, i.e. the previous node in the path
 }
 
-// Placeholder values
-const startPos: number[] = [0, 0];
-const endPos: number[] = [2, 2];
-const obstacles: number[][] = [[1, 1], [2, 1]];
-const map: number[][] = [];
+type Coordinates = {
+    x: number,
+    y: number
+}
 
-// Placeholder values
+// Enter desired values
+const startPos: Coordinates = {x: 7, y: 1};
+const endPos: Coordinates = {x: 4, y: 4};
+const obstacles: Coordinates[] = [{x: 3, y: 3}, {x: 4, y: 3}, {x: 5, y: 3}, {x: 6, y: 3}, {x: 7, y: 3}, {x: 3, y: 4}];
+const bounds: Coordinates[] = [{x: 0, y: 0}, {x: 10, y: 5}];
+
+// Only x- and y-coordinates are of relevance
 const startNode: gNode = {
-    x: startPos[0],
-    y: startPos[1],
+    x: startPos.x,
+    y: startPos.y,
     g: 0,
     h: 0,
     f: 0,
     parent: undefined
 };
 
-// Placeholder values
-const endNode: gNode = {
-    x: endPos[0],
-    y: endPos[1],
+// Only x- and y-coordinates are of relevance
+const endNode: gNode =  {
+    x: endPos.x,
+    y: endPos.y,
     g: 0,
     h: 0,
     f: 0,
     parent: undefined
 }
 
-// Creates a 10x10 grid saved to 'map', excluding nontraversable points (obstacles)
-for (let x = 0; x <= 9; x++) {
-    for (let y = 0; y <= 9; y++) {
-        if (obstacles.indexOf([x, y]) === -1) {
-            map.push([x, y]);
-        }
-    }
-}
+function aStar(start: gNode, end: gNode): gNode[] {
+    let openList: gNode[] = [start]; // Open list contains nodes to be evaluated, start node is its initial node
+    let closedList: gNode[] = []; // Closed list contains nodes already evaluated
 
-// Returns an array of nodes that make up the most efficient path from start to end node
-function aStar(start:gNode, end:gNode): gNode[] {
-    const openList = [start]; // Start node is the initial node in the open list
-    const closedList = [];
-    let current = openList[0]; // Current node is initially the first node in the open list
-
+    // Loop until open list is empty (or end node is reached)
     while (openList.length > 0) {
-        // Compares f costs of every node in the open list, saves lowest as current
-        for (let i = 0; i < openList.length; i++) {
-            if (current.f < openList[i].f) {
+        let current = openList[0]; // Current node is initially the first node in the open list
+
+        // Compares f-costs of each node in the open list, saves lowest as current
+        for (let i = 1; i < openList.length; i++) {
+            if (current.f > openList[i].f || current.f === openList[i].f && current.h > openList[i].h) { // If current node has greater f-cost OR if equal AND current has greater h-cost
                 current = openList[i];
             }
         }
 
-        openList.splice(openList.indexOf(current), 1); // Removes current node from open list
-        closedList.push(current); // Adds current node to closed list
+        openList.splice(openList.indexOf(current), 1); // Removes current node from the open list
+        closedList.push(current); // Adds current node to the closed list
 
+        // Checks if current node is end node, and if so, constructs the path to it
         if (current.x === end.x && current.y === end.y) {
-            return [current]; // Returns current node including its parents (path) (?)
-        } else {
-            let adjacentNodes = getAdjacentNodes(current);
+            let path: gNode[] = [];
+            let currentNode: gNode | undefined = current;
 
-            for (let i = 0; i < adjacentNodes.length; i++) {
-                if (closedList.includes(adjacentNodes[i])) {
-                    continue;
-                } else {
-                    if (true || !openList.includes(adjacentNodes[i])) { // If new path to adjacent node is shorter OR adjacent node is NOT in open list (?)
-                        adjacentNodes[i].parent = current;
+            while (currentNode) { // While current node exists, add current to path, then set current to its parent
+                path.push(currentNode);
+                currentNode = currentNode.parent;
+            }
 
-                        if (!openList.includes(adjacentNodes[i])) {
-                            openList.push(adjacentNodes[i]);
-                        }
+            return path.reverse(); // Returns the path from start to end rather than end to start
+        }
+
+        // Retrieves the adjacent node coordinates in eight directions (up/down/left/right/diagonals)
+        let adjacentNodeCoordinates: Coordinates[] = [
+            {x: current.x - 1, y: current.y - 1},
+            {x: current.x - 1, y: current.y},
+            {x: current.x - 1, y: current.y + 1},
+            {x: current.x, y: current.y - 1},
+            {x: current.x, y: current.y + 1},
+            {x: current.x + 1, y: current.y - 1},
+            {x: current.x + 1, y: current.y},
+            {x: current.x + 1, y: current.y + 1},
+        ];
+
+        // Filters adjacent node coordinates to those within bounds, that also aren't obstacles
+        adjacentNodeCoordinates = adjacentNodeCoordinates.filter(coordinates => {
+            let x = current.x;
+            let y = current.y;
+
+            return (
+                x >= bounds[0].x && x <= bounds[1].x &&
+                y >= bounds[0].y && y <= bounds[1].y &&
+                !obstacles.some(obstacle => obstacle.x === x && obstacle.y === y)
+            );
+        });
+
+        let adjacentNodes: gNode[] = [];
+
+        // Constructs adjacent nodes for each adjacent node coordinate
+        for (let i = 0; i < adjacentNodeCoordinates.length; i++) {
+            let x = adjacentNodeCoordinates[i].x;
+            let y = adjacentNodeCoordinates[i].y;
+
+            // Assumed distance/movement cost for straight movement is 1, diagonal movement is sqrt(2)
+            // For g-, h- and f-costs, if x- or y-values remain unchanged, movement is straight, otherwise it's diagonal
+            let currentAdjacent: gNode = {
+                x: x,
+                y: y,
+                g: current.g + Math.sqrt(2 - (x === current.x || y === current.y ? 1 : 0)),
+                h: Math.sqrt(Math.abs(x - end.x) + Math.abs(y - end.y)),
+                f: current.g + Math.sqrt(2 - (x === current.x || y === current.y ? 1 : 0)) + Math.sqrt(Math.abs(x - end.x) + Math.abs(y - end.y)), // If possible, could be defined more simply as g + h
+                parent: current
+            }
+
+            adjacentNodes.push(currentAdjacent);
+        }
+
+        // For each adjacent node
+        for (let i = 0; i < adjacentNodes.length; i++) {
+            let adjacent = adjacentNodes[i];
+
+            // Check if adjacent node is in the closed list, if so, skip it
+            if (closedList.some(node => node.x === adjacent.x && node.y === adjacent.y)) {
+                continue;
+            } else {
+                let openNode = openList.find(node => node.x === adjacent.x && node.y === adjacent.y); // If a node with the same x- and y-coordinates as the adjacent node exists, create open node
+
+                if (openNode) { // If open node exists
+                    // Check if current path (g-cost of current + h-cost of current to adjacent) is shorter than the adjacent node's previously stored g-cost in the open list
+                    // (this can happen if an adjacent node is generated with a different current node)
+                    if (openNode.g > adjacent.g) {
+                        openNode.g = adjacent.g;
+                        openNode.f = adjacent.f;
+                        openNode.parent = current;
                     }
+                } else { // If not, add adjacent node to the open list
+                    openList.push(adjacent);
                 }
             }
         }
-
-    }
-    
-    return []; // Returns empty array if no path exists
-}
-
-// Gets adjacent nodes of current within map confinements and sets current as their parent
-function getAdjacentNodes(current: gNode): gNode[] {
-    const x = current.x;
-    const y = current.y;
-    
-    // Gets coordinates of adjacent nodes, filtered to only traversable points
-    const adjacentNodeCoordinates = [
-        [x - 1, y - 1],
-        [x - 1, y],
-        [x - 1, y + 1],
-        [x, y - 1],
-        [x, y + 1],
-        [x + 1, y - 1],
-        [x + 1, y],
-        [x + 1, y + 1],
-    ].filter(item => map.includes(item));
-
-    let currentAdjacent: gNode = current;
-    const adjacentNodes: gNode[] = [];
-
-    for (let i = 0; i < adjacentNodeCoordinates.length; i++) {
-        currentAdjacent = {
-            x: adjacentNodeCoordinates[i][0],
-            y: adjacentNodeCoordinates[i][1],
-            g: 0, // Placeholder
-            h: heuristic(currentAdjacent, endNode),
-            f: 0, // Placeholder
-            parent: current
-        };
-
-        adjacentNodes.push(currentAdjacent);
     }
 
-    return adjacentNodes;
+    return []; // Returns empty if no path exists
 }
 
-// Calculates the distance/movement cost from current to end node (h-cost) for the movement in eight directions (up/down/left/right/diagonal)
-// Assumes length of 1 between nodes in up/down/left/right directions, sqrt(2) diagonally
-function heuristic(current: gNode, end: gNode): number {
-    const dx: number = Math.abs(current.x - end.x);
-    const dy: number = Math.abs(current.y - end.y);
-    
-    const h = (dx + dy) + (Math.sqrt(2) - 2) * Math.min(dx, dy);
-
-    return h;
-}
+console.log(aStar(startNode, endNode));
