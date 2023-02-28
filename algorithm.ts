@@ -145,8 +145,8 @@ function aStar(start: gNode, end: gNode): gNode[] {
     return []; // Returns empty if no path exists
 }
 
-let path: Coordinates[] = [];
-let nodes: gNode[] = aStar(startNode, endNode);
+const path: Coordinates[] = [];
+const nodes: gNode[] = aStar(startNode, endNode);
 
 // Extracts x- and y-coordinates from nodes, then flips the y-coordinates
 for (let i = 0; i < nodes.length; i++) {
@@ -159,9 +159,9 @@ for (let i = 0; i < obstacles.length; i++) {
     obstacles[i].y = bounds[1].y - obstacles[i].y;
 }
 
-export let pathCoordinates = path;
-export let obstacleCoordinates = obstacles;
+export const pathCoordinates = path;
+export const obstacleCoordinates = obstacles;
 
 // Tests
-// console.log(pathCoordinates);
-// console.log(obstacleCoordinates);
+console.log(pathCoordinates);
+console.log(obstacleCoordinates);
