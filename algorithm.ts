@@ -145,4 +145,11 @@ function aStar(start: gNode, end: gNode): gNode[] {
     return []; // Returns empty if no path exists
 }
 
-console.log(aStar(startNode, endNode));
+let pathCoordinates: Coordinates[] = [];
+let nodes: gNode[] = aStar(startNode, endNode);
+
+for (let i = 0; i < nodes.length; i++) {
+    pathCoordinates.push({x: nodes[i].x, y: nodes[i].y});
+}
+
+console.log(pathCoordinates);
