@@ -163,5 +163,5 @@ export const pathCoordinates = path;
 export const obstacleCoordinates = obstacles;
 
 // Tests
-console.log(pathCoordinates);
-console.log(obstacleCoordinates);
+// console.log(pathCoordinates);
+// console.log(obstacleCoordinates);
