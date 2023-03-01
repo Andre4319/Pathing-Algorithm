@@ -22,11 +22,11 @@ const startPos3D: Coordinates3D = {x: 7, y: 1, z: 0};
 const endPos3D: Coordinates3D = {x: 4, y: 4, z: 2};
 const obstacles3D: Coordinates3D[] = [
     {x: 3, y: 3, z: 0}, {x: 4, y: 3, z: 0}, {x: 5, y: 3, z: 0}, {x: 6, y: 3, z: 0}, {x: 7, y: 3, z: 0}, {x: 3, y: 4, z: 0},
-    {x: 3, y: 3, z: 1}, {x: 4, y: 3, z: 1}, {x: 5, y: 3, z: 1}, {x: 6, y: 3, z: 1}, {x: 7, y: 3, z: 1}, {x: 3, y: 4, z: 1},
+    {x: 3, y: 3, z: 1}, {x: 4, y: 3, z: 1}, {x: 5, y: 3, z: 1}, {x: 6, y: 3, z: 1}, {x: 7, y: 3, z: 1}, {x: 3, y: 4, z: 1}, {x: 5, y: 4, z: 1}, {x: 5, y: 5, z: 1},
     {x: 3, y: 3, z: 2}, {x: 4, y: 3, z: 2}, {x: 5, y: 3, z: 2}, {x: 6, y: 3, z: 2}, {x: 7, y: 3, z: 2}, {x: 3, y: 4, z: 2},
 ];
 
-/* Example of obstacles that gives an incorrect path
+/* Example of obstacles that gives a slightly inefficent path
 const obstacles3D: Coordinates3D[] = [
     {x: 3, y: 3, z: 0}, {x: 4, y: 3, z: 0}, {x: 5, y: 3, z: 0}, {x: 6, y: 3, z: 0}, {x: 7, y: 3, z: 0}, {x: 3, y: 4, z: 0},
     {x: 3, y: 3, z: 1}, {x: 4, y: 3, z: 1}, {x: 5, y: 3, z: 1}, {x: 6, y: 3, z: 1}, {x: 7, y: 3, z: 1}, {x: 3, y: 4, z: 1},
@@ -109,7 +109,7 @@ function aStar3d(start: gNode3D, end: gNode3D): gNode3D[] {
                 x >= bounds3D[0].x && x <= bounds3D[1].x &&
                 y >= bounds3D[0].y && y <= bounds3D[1].y &&
                 z >= bounds3D[0].z && z <= bounds3D[1].z &&
-                !obstacles3D.some(obstacle => obstacle.x === x && obstacle.y === y && obstacle.z)
+                !obstacles3D.some(obstacle => obstacle.x === x && obstacle.y === y && obstacle.z === z)
             );
         });
 
