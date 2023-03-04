@@ -1,8 +1,8 @@
 let fs = require('fs');
 import * as PNGSync from 'pngjs/lib/png-sync';
 import * as PNG from 'pngjs'
-import { type Node, type Dimension, type Grid, createGrid, getRelativeNode } from './Position';
-import { equals, limit } from './Util';
+import { type Node, type Dimension, type Grid, getRelativeNode } from './Position';
+import { equals } from './Util';
 
 /**
  * Image file data
@@ -42,7 +42,7 @@ type Color = {
 /**
  * The colors for each type
  */
-enum ColorKey {
+export enum ColorKey {
     MapBackground = 'map_background',
     MapBorder = 'map_border',
     MapObstacles = 'map_obstacles',
@@ -56,7 +56,7 @@ enum ColorKey {
  * The fixed color defenitions.
  * To add another you'll have to implement the handling of it
  */
-const ColorDefenitions: Map<string, Color> = new Map<string, Color>([
+export const ColorDefenitions: Map<string, Color> = new Map<string, Color>([
     [ColorKey.MapBackground, { red: 255, green: 255, blue: 255, alpha: 255 }],
     [ColorKey.MapBorder,     { red: 23,  green: 23,  blue: 23,  alpha: 255 }],
     [ColorKey.MapObstacles,  { red: 0,   green: 0,   blue: 0,   alpha: 255 }],
@@ -80,7 +80,6 @@ export class TraversableMap {
     private allNodes: MapArray[];
 
     constructor(image: Image, grid: Grid) {
-        console.log(image);
         this.image = image;
         this.grid = grid;
         if(image.path === undefined) {
@@ -222,7 +221,7 @@ export class TraversableMap {
             .pipe(new PNG.PNG({filterType: 4}))
             .on('parsed', function() {
                 path.forEach(node => {
-                    coloring(this, mapDimensions, node, color, true);
+                    coloring(this, mapDimensions, node, color, false);
                 })
                 
                 // Write the modified image to a file
@@ -255,6 +254,7 @@ export class TraversableMap {
         } else {
             node = globalNode;
         }
+        console.log(node);
         const idx: number = (png.width * node.y + node.x) << 2;
         png.data[idx] = color.red;
         png.data[idx + 1] = color.green;
@@ -266,7 +266,7 @@ export class TraversableMap {
      * A Deep look into the data
      * @returns All data regarding the traversable map
      */
-    public toObject(): {image: Image, fixedNodes: FixedNodes, grid: Grid, allNodes: MapArray[]} {
+    public get(): {image: Image, fixedNodes: FixedNodes, grid: Grid, allNodes: MapArray[]} {
         return {image: this.image, fixedNodes: this.fixedNodes, grid: this.grid, allNodes: this.allNodes}
     }
 
