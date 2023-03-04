@@ -1,8 +1,8 @@
 let fs = require('fs');
 import * as PNGSync from 'pngjs/lib/png-sync';
 import * as PNG from 'pngjs'
-import { type Node, type Dimension, type Grid, getRelativeNode } from './Position';
-import { equals } from './Util';
+import { type Node, type Dimension, type Grid, getRelativeNode, getGlobalNode, createGrid } from './Position';
+import { equals, limit } from './Util';
 
 /**
  * Image file data
@@ -12,6 +12,12 @@ interface Image {
     path?: string;
     dimension?: Dimension;
 }
+
+/**
+ * A exception in case of loading a map is a failure 
+ */
+class InvalidMapException extends Error {}
+
 
 /**
  * Fixed nodes/positions for the origin and end nodes
@@ -82,19 +88,18 @@ export class TraversableMap {
     constructor(image: Image, grid: Grid) {
         this.image = image;
         this.grid = grid;
-        if(image.path === undefined) {
-            this.image.path = image.path ?? './resources';
-        }
         
+        this.image.path = image.path ?? './resources';
         this.fixedNodes = { origin: { x: -1, y: -1 }, end: { x: -1, y: -1 }};
         this.allNodes = [];
         
         const buffer = fs.readFileSync(`${image.path}/${image.fileName}`);
         const png = PNGSync.read(buffer);
         const { width, height } = png;
-        if(image.dimension === undefined) {
-            image.dimension = {width, height}
+        if(width < 2 && height < 2) {
+            throw new InvalidMapException('Map must be (or greater than) 2x2');
         }
+        image.dimension = { width, height }
 
         this.mapDimensions = {
             width: Math.floor(this.image.dimension.width / this.grid.columns), 
@@ -102,6 +107,7 @@ export class TraversableMap {
         };
 
         this.load(png);
+
         for (let i = 0; i < this.depthMap.size; i++) {
             this.allNodes.push(this.depthMap.get(i));
         }
@@ -125,7 +131,7 @@ export class TraversableMap {
                 const globalNode: Node = { x , y, }
                 const idx = (this.image.dimension.width * (globalNode.y + yDepth) + (globalNode.x + xDepth)) << 2;
 
-                const xBorder = this.mapDimensions.width * (xDepth + 1) + xDepth
+                const xBorder = this.mapDimensions.width * (xDepth + 1) + xDepth;
 
                 xDepth += x === xBorder ? 1 : 0;
 
@@ -156,23 +162,25 @@ export class TraversableMap {
             }
         }
 
-        
+        if(this.fixedNodes.origin.x === -1 || this.fixedNodes.origin.y === -1 || this.fixedNodes.end.x === -1 || this.fixedNodes.end.y === -1) {
+            throw new InvalidMapException('Map needs an origin and a end point');
+        }
 
         for (let z = 0; z <= (this.grid.columns * this.grid.rows - 2) + 1; z++) {
-            const obstaclt: Node[] = [];
-            const travert: Node[] = [];
+            const _obstacle: Node[] = [];
+            const _traversable: Node[] = [];
             obstacle.forEach(v => {
                 if(v.z === z) {
-                    obstaclt.push(v);
+                    _obstacle.push(v);
                 }
             })
 
             travers.forEach(v => {
                 if(v.z === z) {
-                    travert.push(v);
+                    _traversable.push(v);
                 }
             })
-            this.depthMap.set(z, {traversable: travert, obstacles: obstaclt});
+            this.depthMap.set(z, {traversable: _traversable, obstacles: _obstacle});
         }
     }
 
@@ -188,20 +196,20 @@ export class TraversableMap {
             return undefined;
         }
         
-        const node: Node =  {x, y, z}
+        const node: Node = { x, y, z };
         let type = '';
 
         if(equals(this.fixedNodes.origin, node)) {
-            type = 'origin'
+            type = 'origin';
         } else if(equals(this.fixedNodes.end, node)) {
-            type = 'end'
-        } else if(this.allNodes[z].traversable.some(v => { return v.x === x && v.y === y})) {
-            type = 'traversable'
+            type = 'end';
+        } else if(this.allNodes[z].traversable.some(traversableNode => { return equals(getGlobalNode(traversableNode, this.mapDimensions, this.grid), getGlobalNode(node, this.mapDimensions, this.grid))})) {
+            type = 'traversable';
         } else {
-            type = 'non-traversable'
+            type = 'non-traversable';
         }
 
-        return { type, node }
+        return { type, node };
 
     }
 
@@ -211,7 +219,8 @@ export class TraversableMap {
      * @param color The color the path will be
      */
     public drawPath(path: Node[], color: Color) {
-        const targetDirectory = this.image.path + '/' + this.image.fileName.split('.')[0] + '/';
+        const targetDirectory = this.image.path + '/Completed Paths/';
+        const name = this.image.fileName;
         fs.mkdirSync(targetDirectory, { recursive: true });
 
         const coloring = this.colorNode;
@@ -225,7 +234,7 @@ export class TraversableMap {
                 })
                 
                 // Write the modified image to a file
-                this.pack().pipe(fs.createWriteStream(targetDirectory + 'complete.png'));
+                this.pack().pipe(fs.createWriteStream(targetDirectory + name));
             });
     }
 
@@ -254,12 +263,19 @@ export class TraversableMap {
         } else {
             node = globalNode;
         }
-        console.log(node);
         const idx: number = (png.width * node.y + node.x) << 2;
-        png.data[idx] = color.red;
-        png.data[idx + 1] = color.green;
-        png.data[idx + 2] = color.blue;
+        png.data[idx] = limit(color.red, 0, 255);
+        png.data[idx + 1] = limit(color.green, 0, 255);
+        png.data[idx + 2] = limit(color.blue, 0, 255);
         png.data[idx + 3] = color.alpha ?? 255;
+    }
+
+    /**
+     * Gets the private variable.
+     * @returns The dimensions of each map
+     */
+    public getMapDimensions(): Dimension {
+        return this.mapDimensions;
     }
 
     /**
@@ -267,7 +283,7 @@ export class TraversableMap {
      * @returns All data regarding the traversable map
      */
     public get(): {image: Image, fixedNodes: FixedNodes, grid: Grid, allNodes: MapArray[]} {
-        return {image: this.image, fixedNodes: this.fixedNodes, grid: this.grid, allNodes: this.allNodes}
+        return { image: this.image, fixedNodes: this.fixedNodes, grid: this.grid, allNodes: this.allNodes };
     }
 
     /**
@@ -282,37 +298,33 @@ export class TraversableMap {
         };
     
         const maps: string[][] = [];
-        let z = 0;
-        for(const {obstacles, traversable} of this.allNodes) {
+        for(let z = 0; z < this.allNodes.length; z++) {
             let mapString: string = '';
             for(let y = 0; y < this.mapDimensions.height; y++) {
                 for(let x = 0; x < this.mapDimensions.width; x++) {
-                    const node: Node = { x, y }
-    
-                    const isObstacle: boolean = obstacles?.some(({x: obstacleX, y: obstacleY, }) => {
-                        return obstacleX === x &&
-                               obstacleY === y;
-                    });
-    
-                    if(isObstacle) {
-                        mapString += SYMBOLS.obstalce;
-                    } else {
-                        if(equals({x: node.x, y: node.y, z}, this.fixedNodes.origin)) {
+                    switch (this.getNode(x, y, z).type) {
+                        case 'non-traversable':
+                            mapString += SYMBOLS.obstalce;
+                            break;
+                        case 'origin':
                             mapString += SYMBOLS.origin;
-                        } else if(equals({x: node.x, y: node.y, z}, this.fixedNodes.end)) {
+                            break;
+                        case 'end':
                             mapString += SYMBOLS.end;
-                        } else {
-                            mapString += SYMBOLS.node;
-                        }
+                            break;
+                        default:
+                            mapString += SYMBOLS.node
+                            break;
                     }
                 }
     
                 mapString += '\n';
             }
             maps.push(mapString.trimEnd().split('\n'));
-            z++;
         }
     
         console.log(maps);
     }
 }
+
+const a = new TraversableMap({fileName: 'test.png'}, createGrid(1,1))
