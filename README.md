@@ -14,7 +14,7 @@ and not yet traversed), obstacles (nontraversable), and starting points
 and endpoints. Creating a visual representation of the traversal from
 one point to another.
 
-- [ ] Week 2-3: Creating a reasonably efficient algorithm for finding a path
+- [X] Week 2-3: Creating a reasonably efficient algorithm for finding a path
 from a starting point to an endpoint.
 
 - [X] Optional: Adding more grids (maps with different obstacles) to test
@@ -32,4 +32,4 @@ Mainly through Discord on a per-need basis, likely every week-day
 | Libraries     | License       |
 | ------------- | ------------- |
 | [pngjs](https://github.com/lukeapage/pngjs)  | MIT License  |
-| [jest](https://github.com/facebook/jest)     | MIT license  |
+| [jest](https://github.com/facebook/jest)     | MIT License  |
