@@ -3,12 +3,11 @@ import { TraversableMap, ColorDefenitions, ColorKey } from "./TraversableMap";
 import { createGrid, type Node, createNode } from "./Position";
 import { equals } from "./Util";
 
-const first2DMap = new TraversableMap({fileName: 'test.png'}, createGrid(1, 1));
-
+const first2DMap = new TraversableMap({fileName: 'bigtest.png'}, createGrid(1, 1));
 run(first2DMap);
 
 function run(traversableMap: TraversableMap) {
-    const quickest = runAStar(first2DMap);
+    const quickest = runAStar(traversableMap);
     const path: Node[] = [];
 
     for (let i = 0; i < quickest.length; i++) {

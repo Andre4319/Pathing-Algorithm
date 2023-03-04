@@ -11,6 +11,7 @@ type gNode = {
     f: number, // the sum of g and h
     parent?: gNode // A parent node, i.e. the previous node in the path
 }
+let searchedNodes: gNode[];
 
 /**
  * Global function to run the algorithm
@@ -31,8 +32,8 @@ export function runAStar(traversableMap: TraversableMap): gNode[] {
  * @returns The maps bounds
  */
 function getBounds(traversableMap: TraversableMap): Node[] {
-    return [createNode(0,0), createNode(traversableMap.getMapDimensions().width, 
-                                        traversableMap.getMapDimensions().height)];
+    return [createNode(0,0), createNode(traversableMap.get().image.dimension.width - 1, 
+                                        traversableMap.get().image.dimension.height - 1)];
 }
 
 function aStar(start: Node, end: Node, obstacles: Node[], bounds: Node[]): gNode[] {
@@ -62,21 +63,12 @@ function aStar(start: Node, end: Node, obstacles: Node[], bounds: Node[]): gNode
                 path.push(currentNode);
                 currentNode = currentNode.parent;
             }
-
-            return path.reverse(); // Returns the path from start to end rather than end to start
+            searchedNodes = closedList;
+            return  path.reverse(); // Returns the path from start to end rather than end to start
         }
 
         // Retrieves the adjacent node coordinates in eight directions (up/down/left/right/diagonals)
-        let adjacentNodeCoordinates: Node[] = [
-            createNode(current.node.x - 1, current.node.y - 1),
-            createNode(current.node.x - 1, current.node.y),
-            createNode(current.node.x - 1, current.node.y + 1),
-            createNode(current.node.x,     current.node.y - 1),
-            createNode(current.node.x,     current.node.y + 1),
-            createNode(current.node.x + 1, current.node.y - 1),
-            createNode(current.node.x + 1, current.node.y),
-            createNode(current.node.x + 1, current.node.y + 1),
-        ];
+        let adjacentNodeCoordinates: Node[] = getAdjacentNodes(bounds, current.node);
         // Filters adjacent node coordinates to those within bounds, that also aren't obstacles
         adjacentNodeCoordinates = adjacentNodeCoordinates.filter(coordinates => {
             let x = current.node.x;
@@ -135,4 +127,18 @@ function aStar(start: Node, end: Node, obstacles: Node[], bounds: Node[]): gNode
     }
 
     return []; // Returns empty if no path exists
+}
+
+function getAdjacentNodes(bounds: Node[], node: Node): Node[] {
+    const adjacentNodes: Node[] = [];
+    for (let x = node.x - 1; x <= node.x + 1; x++) {
+        for (let y = node.y - 1; y <= node.y + 1; y++) {
+            if(x < bounds[0].x || x > bounds[1].x || y < bounds[0].y || y > bounds[1].y) {
+                continue;
+            }
+                
+            adjacentNodes.push(createNode(x, y))
+        }
+    }
+    return adjacentNodes;
 }

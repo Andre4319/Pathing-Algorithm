@@ -220,6 +220,7 @@ export class TraversableMap {
      */
     public drawPath(path: Node[], color: Color) {
         const targetDirectory = this.image.path + '/Completed Paths/';
+        
         const name = this.image.fileName;
         fs.mkdirSync(targetDirectory, { recursive: true });
 
@@ -326,5 +327,3 @@ export class TraversableMap {
         console.log(maps);
     }
 }
-
-const a = new TraversableMap({fileName: 'test.png'}, createGrid(1,1))
