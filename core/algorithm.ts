@@ -1,7 +1,7 @@
 // A* Search Algorithm
-import { Node, createNode } from "./Position";
+import { Node, createNode } from "../utilities/Position";
 import { TraversableMap } from "./TraversableMap";
-import { equals } from "./Util";
+import { equals } from '../utilities/Util'
 
 // Node structure
 type gNode = {

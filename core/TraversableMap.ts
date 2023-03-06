@@ -1,8 +1,8 @@
 let fs = require('fs');
 import * as PNGSync from 'pngjs/lib/png-sync';
 import * as PNG from 'pngjs'
-import { type Node, type Dimension, type Grid, getRelativeNode, getGlobalNode, createGrid } from './Position';
-import { equals, limit } from './Util';
+import { type Node, type Dimension, type Grid, getRelativeNode, getGlobalNode, createGrid, createNode } from '../utilities/Position';
+import { equals, limit } from '../utilities/Util';
 
 /**
  * Image file data
@@ -97,7 +97,7 @@ export class TraversableMap {
         const png = PNGSync.read(buffer);
         const { width, height } = png;
         if(width < 2 && height < 2) {
-            throw new InvalidMapException('Map must be (or greater than) 2x2');
+            throw new InvalidMapException('Map must be greater than (or equal to) 2x2');
         }
         image.dimension = { width, height }
 
@@ -120,6 +120,7 @@ export class TraversableMap {
     private load(png: any) {  
         const obstacle: Node[] = [];
         const travers: Node[] = [];
+        let a = false;
         let yDepth = 0;
         for (let y = 0; y < png.height; y++) {
             let xDepth = 0;
@@ -129,11 +130,15 @@ export class TraversableMap {
     
             for (let x = 0; x < png.width; x++) {
                 const globalNode: Node = { x , y, }
-                const idx = (this.image.dimension.width * (globalNode.y + yDepth) + (globalNode.x + xDepth)) << 2;
+                const idx = (this.image.dimension.width * y + x) << 2;
 
                 const xBorder = this.mapDimensions.width * (xDepth + 1) + xDepth;
 
                 xDepth += x === xBorder ? 1 : 0;
+
+                if(x === xBorder) {
+                    continue;
+                }
 
                 const pixelColor: Color = { 
                     red: png.data[idx], 
@@ -142,21 +147,22 @@ export class TraversableMap {
                     alpha: 255,
                 };
 
+                
+
                 const originColor: Color = ColorDefenitions.get(ColorKey.MapOrigin);
                 const endColor: Color    = ColorDefenitions.get(ColorKey.MapEnd);
                 const mapColor: Color    = ColorDefenitions.get(ColorKey.MapBackground);
                 const mapObstacle: Color = ColorDefenitions.get(ColorKey.MapObstacles);
 
+                const relativeNode: Node = getRelativeNode(globalNode, { xDepth, yDepth }, this.mapDimensions);
+
                 if(equals(mapColor, pixelColor)) {
-                    travers.push(getRelativeNode(globalNode, this.mapDimensions))
+                    travers.push(relativeNode)
                 } else if(equals(originColor, pixelColor)) {
-                    const relativeNode: Node = getRelativeNode(globalNode, this.mapDimensions);
                     this.fixedNodes.origin = relativeNode;
                 } else if(equals(endColor, pixelColor)) {
-                    const relativeNode: Node = getRelativeNode(globalNode, this.mapDimensions);
                     this.fixedNodes.end = relativeNode;
                 } else if(equals(mapObstacle, pixelColor)) {
-                    const relativeNode: Node = getRelativeNode(globalNode, this.mapDimensions);
                     obstacle.push(relativeNode)
                 }
             }

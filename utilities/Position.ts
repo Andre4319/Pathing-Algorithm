@@ -89,27 +89,36 @@ export function getGlobalNode(relativeNode: Node, mapDimensions: Dimension, grid
  * @param mapDimensions The dimensions of each map
  * @returns The X, Y and Z positions
  */
-export function getRelativeNode(globalNode: Node, mapDimensions: Dimension): Node {
-    const relativeX = globalNode.x % mapDimensions.width;
-    const relativeY = globalNode.y % mapDimensions.height;
-    let relativeZ = 0;
-    let columnDepth = 0;
-
-    if(globalNode.y > mapDimensions.height) {
-        for (let y = globalNode.y - relativeY; y > 0 ; y -= mapDimensions.height) {
-            for (let x = globalNode.x - relativeX; x > 0 ; x -= mapDimensions.width) {
-                relativeZ++;
-            }
-            columnDepth++;
-            relativeZ++;
-        }
-    
-        relativeZ += columnDepth;
-    } else {
-        for (let x = globalNode.x - relativeX; x > 0 ; x -= mapDimensions.width) {
-            relativeZ++;
-        }
+export function getRelativeNode(globalNode: Node, depth: { xDepth: number, yDepth: number }, mapDimensions: Dimension): Node {
+    const { width, height } = mapDimensions;
+    if(globalNode.x <= width && globalNode.y <= height) { 
+        return { x: globalNode.x, y: globalNode.y, z: 0 }; 
     }
-    
-    return { x: relativeX, y: relativeY, z: relativeZ }
+    let relativeZ = 0;
+
+    if(globalNode.y > height) {
+        let y = globalNode.y - height;
+        let x = globalNode.x - width;
+
+        while(y > 0) {
+            while(x > 0) {
+                relativeZ++;
+                x -= width;
+            }
+            y -= height;
+
+            x = globalNode.x - width;
+            relativeZ++;
+        }
+        
+        relativeZ += Math.floor(globalNode.y / height);
+    } else {
+        relativeZ += Math.floor(globalNode.x / width);
+    }
+
+    return { 
+        x: globalNode.x - (width * depth.xDepth) - depth.xDepth, 
+        y: globalNode.y - (height * depth.yDepth) - depth.yDepth, 
+        z: relativeZ 
+    };
 }

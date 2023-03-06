@@ -3,8 +3,8 @@
 let fs = require('fs');
 import * as PNGSync from 'pngjs/lib/png-sync';
 import * as PNG from 'pngjs'
-import { type Node, type Dimension, type Grid, createNode, getRelativeNode, getGlobalNode } from './Position';
-import { equals, limit } from './Util';
+import { type Node, type Dimension, type Grid, createNode, getRelativeNode, getGlobalNode } from '../utilities/Position';
+import { equals, limit } from '../Util';
 
 /**
  * Image file data

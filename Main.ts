@@ -1,10 +1,11 @@
-import { runAStar } from "./algorithm";
-import { TraversableMap, ColorDefenitions, ColorKey } from "./TraversableMap";
-import { createGrid, type Node, createNode } from "./Position";
-import { equals } from "./Util";
+import { runAStar } from './core/algorithm';
+import { TraversableMap, ColorDefenitions, ColorKey } from './core/TraversableMap';
+import { createGrid, type Node, createNode, getRelativeNode } from './utilities/Position';
+import { equals } from './utilities/Util';
 
-const first2DMap = new TraversableMap({fileName: 'bigtest.png'}, createGrid(1, 1));
+const first2DMap = new TraversableMap({fileName: 'Maze.png'}, createGrid(1, 1));
 run(first2DMap);
+
 
 function run(traversableMap: TraversableMap) {
     const quickest = runAStar(traversableMap);
