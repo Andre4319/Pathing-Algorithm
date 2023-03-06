@@ -5,7 +5,10 @@ import { type Node, type Dimension, type Grid, getRelativeNode, getGlobalNode } 
 import { equals, limit } from '../utilities/Util';
 
 /**
- * Image file data
+ * The Image interface contains data regarding an image
+ * @property {Node} fileName - The name of the image and extension (such as abc.png)
+ * @property {Node} path - The path of the image, the default path is .\resources as such you can leave it blank.
+ * @property {Node} dimension - Specifies the dimensions of the givenb image
  */
 interface Image {
     fileName: string;
@@ -18,14 +21,20 @@ interface Image {
  */
 class InvalidMapException extends Error {}
 
-/* A interface for the origin and end nodes. */
+/**
+ *  The FixedNodes interface specifies the static or fixed nodes of a TraversableMap.
+ * @property {Node} origin - Specifies the given node for where the algorithm is to start from
+ * @property {Node} end - Specifies what node is the end point for the algorithm to arrive to.
+ */
 interface FixedNodes {
     origin: Node;
     end: Node;
 }
 
 /**
- * Map data containing obstacles & all traversable nodes
+ * The MapArray interface takes two Node[] to specify what can be traversed by the algorithm and what can't. Obstacles can be undefined as there doesn't need to be obstacles.
+ * @property {Node[]} traversable - Specifies what can be traveled through
+ * @property {Node[]} obstacles - Specifies what can't be traveled through
  */
 interface MapArray {
     traversable: Node[];

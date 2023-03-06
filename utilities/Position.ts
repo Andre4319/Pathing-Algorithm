@@ -11,7 +11,9 @@ export type Node = {
 };
 
 /**
- * Dimensions of a given object
+ * The Dimension interface specifies the boundaries of a given map or an image.
+ * @property {number} width - Specifies the max width (max x value) of the given object
+ * @property {number} height - Specifies the max height (max y value) of the given object
  */
 export interface Dimension {
     width: number;
@@ -19,7 +21,9 @@ export interface Dimension {
 }
 
 /**
- * The grid data for each map
+ * The grid interface takes a number of columns and rows
+ * @property {number} columns - The number of columns in the grid
+ * @property {number} rows - The number of rows in the grid
  */
 export interface Grid {
     columns: number;

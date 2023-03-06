@@ -3,7 +3,17 @@ import { Node, createNode } from "../utilities/Position";
 import { TraversableMap } from "./TraversableMap";
 import { equals } from '../utilities/Util'
 
-// Node structure
+/**
+ * A gNode is an object with a node property, a g property, an h property, an f property, and an
+ * optional parent property.
+ * @property {Node} node - The node object itself, containing the x and y values.
+ * @property {number} g - The distance/movement cost from the start to the current node.
+ * @property {number} h - The heuristic value of the node. This is the estimated distance from the node
+ * to the end node.
+ * @property {number} f - The total cost of the node. This is the sum of the g and h values.
+ * @property {gNode} parent - The parent node of the current node. This is used to trace the path from
+ * the end node back to the start node.
+ */
 type gNode = {
     node: Node,
     g: number, // distance/movement cost from start to node
