@@ -21,18 +21,12 @@ type Coordinates3D = {
 const startPos3D: Coordinates3D = {x: 7, y: 1, z: 0};
 const endPos3D: Coordinates3D = {x: 4, y: 4, z: 2};
 const obstacles3D: Coordinates3D[] = [
-    {x: 3, y: 3, z: 0}, {x: 4, y: 3, z: 0}, {x: 5, y: 3, z: 0}, {x: 6, y: 3, z: 0}, {x: 7, y: 3, z: 0}, {x: 3, y: 4, z: 0},
+    {x: 3, y: 3, z: 0}, {x: 4, y: 3, z: 0}, {x: 5, y: 3, z: 0}, {x: 6, y: 3, z: 0}, {x: 7, y: 3, z: 0}, {x: 3, y: 4, z: 0}, 
     {x: 3, y: 3, z: 1}, {x: 4, y: 3, z: 1}, {x: 5, y: 3, z: 1}, {x: 6, y: 3, z: 1}, {x: 7, y: 3, z: 1}, {x: 3, y: 4, z: 1}, {x: 5, y: 4, z: 1}, {x: 5, y: 5, z: 1},
-    {x: 3, y: 3, z: 2}, {x: 4, y: 3, z: 2}, {x: 5, y: 3, z: 2}, {x: 6, y: 3, z: 2}, {x: 7, y: 3, z: 2}, {x: 3, y: 4, z: 2},
+    {x: 3, y: 3, z: 2}, {x: 4, y: 3, z: 2}, {x: 5, y: 3, z: 2}, {x: 6, y: 3, z: 2}, {x: 7, y: 3, z: 2}, {x: 3, y: 4, z: 2}, {x: 5, y: 4, z: 2}, {x: 5, y: 5, z: 2},
 ];
 
-/* Example of obstacles that gives a slightly inefficent path
-const obstacles3D: Coordinates3D[] = [
-    {x: 3, y: 3, z: 0}, {x: 4, y: 3, z: 0}, {x: 5, y: 3, z: 0}, {x: 6, y: 3, z: 0}, {x: 7, y: 3, z: 0}, {x: 3, y: 4, z: 0},
-    {x: 3, y: 3, z: 1}, {x: 4, y: 3, z: 1}, {x: 5, y: 3, z: 1}, {x: 6, y: 3, z: 1}, {x: 7, y: 3, z: 1}, {x: 3, y: 4, z: 1},
-    {x: 3, y: 3, z: 2}, {x: 4, y: 3, z: 2}, {x: 5, y: 3, z: 2}, {x: 6, y: 3, z: 2}, {x: 7, y: 3, z: 2}, {x: 3, y: 4, z: 2}, {x: 5, y: 4, z: 2}, {x: 5, y: 5, z: 2}
-  ];
-*/ 
+
 const bounds3D: Coordinates3D[] = [{x: 0, y: 0, z: 0}, {x: 10, y: 5, z: 2}];
 
 // Only x- and y-Coordinates3D are of relevance
@@ -88,7 +82,7 @@ function aStar3d(start: gNode3D, end: gNode3D): gNode3D[] {
             return path.reverse(); // Returns the path from start to end rather than end to start
         }
 
-        // Retrieves the adjacent node Coordinates3D in 26 directions (up/down/left/right/diagonals)
+        // Retrieves the adjacent node Coordinates3D in 26 directions
         let adjacentNodeCoordinates3D: Coordinates3D[] = [];
             for (let i = -1; i <= 1; i++) {
                 for (let j = -1; j <= 1; j++) {
@@ -127,9 +121,9 @@ function aStar3d(start: gNode3D, end: gNode3D): gNode3D[] {
                 x: x,
                 y: y,
                 z: z,
-                g: current.g + Math.sqrt(Math.abs(x-current.x) + Math.abs(y-current.y) + Math.abs(z-current.z)),
-                h: Math.sqrt((current.x - end.x)^2 + (current.y - end.y)^2 + ((current.z - end.z)^2)),
-                f: current.g + Math.sqrt(Math.abs(x-current.x) + Math.abs(y-current.y) + Math.abs(z-current.z)) + Math.sqrt((current.x - end.x)^2 + (current.y - end.y)^2 + (((current.z - end.z)^2))),
+                g: current.g + Math.sqrt(Math.abs(x-current.x) + Math.abs(y-current.y) + Math.abs(z-current.z)*1.5),
+                h: Math.sqrt((current.x - end.x)^2 + (current.y - end.y)^2 + ((current.z - end.z)^2)*1.5),
+                f: current.g + Math.sqrt(Math.abs(x-current.x) + Math.abs(y-current.y) + Math.abs(z-current.z)*1.5) + Math.sqrt((current.x - end.x)^2 + (current.y - end.y)^2 + (((current.z - end.z)^2)*1.5)),
                 parent: current
             }
 
@@ -144,7 +138,7 @@ function aStar3d(start: gNode3D, end: gNode3D): gNode3D[] {
             if (closedList.some(node => node.x === adjacent.x && node.y === adjacent.y && node.z === adjacent.z)) {
                 continue;
             } else {
-                let openNode = openList.find(node => node.x === adjacent.x && node.y === adjacent.y && node.z === adjacent.z); // If a node with the same x- and y-Coordinates3D as the adjacent node exists, create open node
+                let openNode = openList.find(node => node.x === adjacent.x && node.y === adjacent.y && node.z === adjacent.z); // If a node with the same coordinates as the adjacent node exists, create open node
 
                 if (openNode) { // If open node exists
                     // Check if current path (g-cost of current + h-cost of current to adjacent) is shorter than the adjacent node's previously stored g-cost in the open list
@@ -170,5 +164,5 @@ let nodes3D: gNode3D[] = aStar3d(startNode3D, endNode3D);
 for (let i = 0; i < nodes3D.length; i++) {
     pathCoordinates3D.push({x: nodes3D[i].x, y: nodes3D[i].y, z: nodes3D[i].z});
 }
-
+console.log(nodes3D)
 console.log(pathCoordinates3D);
