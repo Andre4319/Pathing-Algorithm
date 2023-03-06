@@ -1,7 +1,7 @@
 let fs = require('fs');
 import * as PNGSync from 'pngjs/lib/png-sync';
 import * as PNG from 'pngjs'
-import { type Node, type Dimension, type Grid, getRelativeNode, getGlobalNode, createGrid, createNode } from '../utilities/Position';
+import { type Node, type Dimension, type Grid, getRelativeNode, getGlobalNode } from '../utilities/Position';
 import { equals, limit } from '../utilities/Util';
 
 /**
@@ -18,10 +18,7 @@ interface Image {
  */
 class InvalidMapException extends Error {}
 
-
-/**
- * Fixed nodes/positions for the origin and end nodes
- */
+/* A interface for the origin and end nodes. */
 interface FixedNodes {
     origin: Node;
     end: Node;
@@ -36,7 +33,11 @@ interface MapArray {
 }
 
 /**
- * RGB | A data
+ * A Color is an object to represent color values with a red, green, and blue property, and optionally an alpha property.
+ * @property {number} red - The red component of the color.
+ * @property {number} green - The green component of the color.
+ * @property {number} blue - The blue component of the color.
+ * @property {number} alpha - The alpha value of the color.
  */
 type Color = {
     red: number;
@@ -72,10 +73,7 @@ export const ColorDefenitions: Map<string, Color> = new Map<string, Color>([
     [ColorKey.PathSearched,  { red: 255, green: 196, blue: 155, alpha: 255 }],
 ]);
 
-/**
- * A correct traversable 3D map with nodes
- * It contains data for obstacles, the origin and end points
- */
+/* It takes an image and a grid and creates a traversable map */
 export class TraversableMap {
     private image: Image;
     private grid: Grid;
@@ -84,7 +82,13 @@ export class TraversableMap {
 
     private depthMap = new Map<number, MapArray>();
     private allNodes: MapArray[];
-
+    
+    /**
+     * It takes an image and a grid, and then loads the image
+     * 
+     * @param {Image} image - Image
+     * @param {Grid} grid - { columns: number, rows: number }
+     */
     constructor(image: Image, grid: Grid) {
         this.image = image;
         this.grid = grid;
@@ -114,8 +118,8 @@ export class TraversableMap {
     }
 
     /**
-     * Loads the image and sets all variabels
-     * @param png The png instance
+     * It takes a png image and converts it into a 2D array of nodes
+     * @param {any} png - any - The png file that is loaded
      */
     private load(png: any) {  
         const obstacle: Node[] = [];
@@ -191,11 +195,14 @@ export class TraversableMap {
     }
 
     /**
-     * Gets a node and returns its type
-     * @param x position
-     * @param y position
-     * @param z position
-     * @returns node type and position
+     * It takes in a node and returns the type of node it is (origin, end, traversable,
+     * non-traversable) and the node itself.
+     * 
+     * The function is called in the following way:
+     * @param {number} x - number - the x-index of the node
+     * @param {number} y - number - the y-index of the node
+     * @param {number} z - number - the z-index of the node
+     * @returns An object with a type and a node.
      */
     public getNode(x: number, y: number, z: number): { type: string, node: Node } | undefined {
         if(z >= this.allNodes.length) {
@@ -220,9 +227,9 @@ export class TraversableMap {
     }
 
     /**
-     * Draws a path with a color and saves the image in a seperate folder
-     * @param path The path to be drawn
-     * @param color The color the path will be
+     * It takes a path of nodes, and a color, and draws the path on the image.
+     * @param {Node[]} path - The path to draw
+     * @param {Color} color - Color - The color to draw the path with
      */
     public drawPath(path: Node[], color: Color) {
         const targetDirectory = this.image.path + '/Completed Paths/';
@@ -246,12 +253,13 @@ export class TraversableMap {
     }
 
     /**
-     * Colors in a node
-     * @param png The png instance
-     * @param mapDimensions The dimensions of each map
-     * @param globalNode The global position where the node will be colored
-     * @param color The color
-     * @param adjust for borders so that the node will go +1 for every border
+     * It takes a PNG, a node, and a color, and colors the node in the PNG
+     * @param {any} png - the png object
+     * @param {Dimension} mapDimensions - The dimensions of the map
+     * @param {Node} globalNode - The node to color
+     * @param {Color} color - Color - The color to use
+     * @param {boolean} adjust - boolean - If true, the node will be adjusted in regards to the border 
+     * to the correct position on the map.
      */
     private colorNode(png: any, mapDimensions: Dimension, globalNode: Node, color: Color, adjust: boolean) {
         let node: Node;
@@ -278,7 +286,7 @@ export class TraversableMap {
     }
 
     /**
-     * Gets the private variable.
+     * This method returns the dimensions of all maps.
      * @returns The dimensions of each map
      */
     public getMapDimensions(): Dimension {
@@ -286,8 +294,8 @@ export class TraversableMap {
     }
 
     /**
-     * A Deep look into the data
-     * @returns All data regarding the traversable map
+     * This method gets all data for the current traversable map
+     * @returns All data in the traversable map
      */
     public get(): {image: Image, fixedNodes: FixedNodes, grid: Grid, allNodes: MapArray[]} {
         return { image: this.image, fixedNodes: this.fixedNodes, grid: this.grid, allNodes: this.allNodes };
@@ -296,7 +304,7 @@ export class TraversableMap {
     /**
      * Prints all the maps
      */
-    public print() {
+    public printMaps() {
         const SYMBOLS = {
             origin:   ' S ',
             end:      ' E ',

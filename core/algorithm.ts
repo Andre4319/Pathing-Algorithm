@@ -13,10 +13,11 @@ type gNode = {
 }
 let searchedNodes: gNode[];
 
+
 /**
- * Global function to run the algorithm
- * @param traversableMap What map to run the algorithm with
- * @returns The correct nodes
+ * Runs the A* algorithm on a map of nodes, returning the shortest path from the origin to the end.
+ * @param {TraversableMap} traversableMap - TraversableMap
+ * @returns an array of gNodes.
  */
 export function runAStar(traversableMap: TraversableMap): gNode[] {
     const origin: Node = traversableMap.get().fixedNodes.origin;
@@ -36,6 +37,16 @@ function getBounds(traversableMap: TraversableMap): Node[] {
                                         traversableMap.get().image.dimension.height - 1)];
 }
 
+/**
+ * It takes a start node, an end node, an array of obstacles and an array of bounds, and returns an
+ * array of nodes that form the shortest path from the start node to the end node
+ * @param {Node} start - The start node
+ * @param {Node} end - The end node
+ * @param {Node[]} obstacles - An array of nodes that are obstacles
+ * @param {Node[]} bounds - The bounds of the grid, in the form of two nodes, the first being the
+ * top-left corner, the second being the bottom-right corner.
+ * @returns The path from start to end.
+ */
 function aStar(start: Node, end: Node, obstacles: Node[], bounds: Node[]): gNode[] {
     let openList: gNode[] = [{node: start, g: 0, h: 0, f: 0}]; // Open list contains nodes to be evaluated, start node is its initial node
     let closedList: gNode[] = []; // Closed list contains nodes already evaluated
@@ -129,6 +140,12 @@ function aStar(start: Node, end: Node, obstacles: Node[], bounds: Node[]): gNode
     return []; // Returns empty if no path exists
 }
 
+/**
+ * It returns an array of nodes that are adjacent to the given node.
+ * @param {Node[]} bounds - The bounds of the grid.
+ * @param {Node} node - The node to get the adjacent nodes of.
+ * @returns A list of nodes that are adjacent to the node passed in.
+ */
 function getAdjacentNodes(bounds: Node[], node: Node): Node[] {
     const adjacentNodes: Node[] = [];
     for (let x = node.x - 1; x <= node.x + 1; x++) {

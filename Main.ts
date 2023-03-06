@@ -7,6 +7,11 @@ const first2DMap = new TraversableMap({fileName: 'Maze.png'}, createGrid(1, 1));
 run(first2DMap);
 
 
+/**
+ * This function takes a TraversableMap object, runs the A* algorithm on it, and then draws the path on
+ * the map.
+ * @param {TraversableMap} traversableMap - TraversableMap
+ */
 function run(traversableMap: TraversableMap) {
     const quickest = runAStar(traversableMap);
     const path: Node[] = [];

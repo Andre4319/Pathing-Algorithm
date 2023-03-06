@@ -1,5 +1,8 @@
 /**
- * Global Node type
+ * A Node is an object with an x property of type number and a y property of type number.
+ * @property {number} x - number - the x-index of the node
+ * @property {number} y - number - the y-index of the node
+ * @property {number} z - number - the z-index of the node
  */
 export type Node = { 
     x: number; 
@@ -24,11 +27,11 @@ export interface Grid {
 }
 
 /**
- * Global function to get a Node
- * @param x coordinate
- * @param y coordinate
- * @param z coordinate or if it is undefined a 0
- * @returns a nodes position
+ * It creates a node object with the given x, y, and z coordinates
+ * @param {number} x - coordinate
+ * @param {number} y - coordinate
+ * @param {number} [z=0] - coordinate
+ * @returns A function that takes three parameters and returns a Node object.
  */
 export function createNode(x: number, y: number, z: number = 0): Node {
     if(isNaN(x) || isNaN(y)) {
@@ -38,20 +41,21 @@ export function createNode(x: number, y: number, z: number = 0): Node {
 }
 
 /**
- * Creates a dimension
- * @param width How wide
- * @param height How long
- * @returns A dimension with the specified parameters
+ * It takes two numbers, width and height, and returns a dimension object with the same two numbers as
+ * properties
+ * @param {number} width - number
+ * @param {number} height - number
+ * @returns A dimension object
  */
 export function createDimension(width: number, height: number): Dimension {
     return { width, height, }
 }
 
 /**
- * Creates a grid and handles errors
- * @param columns How many columns
- * @param rows How many rows
- * @returns A grid with the specified parameters
+ * It takes a number of columns and rows and returns a grid object with those columns and rows
+ * @param {number} columns - number - The number of columns in the grid
+ * @param {number} rows - number - The number of rows in the grid
+ * @returns A grid with columns and rows
  */
 export function createGrid(columns: number, rows: number): Grid {
     if(columns < 1 || rows < 1) {
@@ -61,11 +65,12 @@ export function createGrid(columns: number, rows: number): Grid {
 }
 
 /**
- * Given a node with depth (z) / independent position you can extract the global position in a 2d grid
- * @param relativeNode Where is the node located
- * @param mapDimensions The dimensions of each map
- * @param grid How many grids are there
- * @returns The global node
+ * It takes a node, a grid, and a map dimension, and returns a node with x and y values, but
+ * with the x and y values adjusted to the in regards to the z value of the relative node
+ * @param {Node} relativeNode - The node that you want to get the global position of.
+ * @param {Dimension} mapDimensions - The dimensions of the map.
+ * @param {Grid} grid - The grid that the map is using.
+ * @returns A node with the x and y coordinates of the node in the global map.
  */
 export function getGlobalNode(relativeNode: Node, mapDimensions: Dimension, grid: Grid): Node {
     const { columns, rows } = grid;
@@ -84,10 +89,11 @@ export function getGlobalNode(relativeNode: Node, mapDimensions: Dimension, grid
 }
 
 /**
- * Given a global node without depth. You can extract the relative position inside each grid
- * @param globalNode The X and Y coordinate in the image
- * @param mapDimensions The dimensions of each map
- * @returns The X, Y and Z positions
+ * It takes a global node, and returns a relative node
+ * @param {Node} globalNode - The node with x and y coordinates that you want to get the relative node of.
+ * @param depth - { xDepth: number, yDepth: number }
+ * @param {Dimension} mapDimensions - The dimensions of the map.
+ * @returns A node object with x, y, and z properties.
  */
 export function getRelativeNode(globalNode: Node, depth: { xDepth: number, yDepth: number }, mapDimensions: Dimension): Node {
     const { width, height } = mapDimensions;
